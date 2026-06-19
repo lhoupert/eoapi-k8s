@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.12.6](https://github.com/developmentseed/eoapi-k8s/compare/v0.12.5...v0.12.6) (2026-06-19)
+
+
+### Fixed
+
+* completed autoscaling instructions. ([#521](https://github.com/developmentseed/eoapi-k8s/issues/521)) ([a6ed773](https://github.com/developmentseed/eoapi-k8s/commit/a6ed7732a3c33eac2245b74eeb659d24f89cdd8a))
+* rely on pgstac default for context=off. ([#522](https://github.com/developmentseed/eoapi-k8s/issues/522)) ([2248057](https://github.com/developmentseed/eoapi-k8s/commit/224805788abd1bf3a719ba1bcf89fbc6f851d72e))
+
+
+### Maintenance
+
+* **deps:** updated actions/checkout action to v7.0.0. ([#523](https://github.com/developmentseed/eoapi-k8s/issues/523)) ([d46de3f](https://github.com/developmentseed/eoapi-k8s/commit/d46de3f670d7ae40eb5520d19bc987de94cc4917))
+* **deps:** updated helm release prometheus to 29.12.0. ([#519](https://github.com/developmentseed/eoapi-k8s/issues/519)) ([4593584](https://github.com/developmentseed/eoapi-k8s/commit/45935843656fe0b0a0e17fa52528b8b8892a119d))
+
 ## [0.12.5](https://github.com/developmentseed/eoapi-k8s/compare/v0.12.4...v0.12.5) (2026-06-12)
 
 
