@@ -25,6 +25,24 @@ tests:
           path: spec.strategy.type
           value: "RollingUpdate"
 
+  - it: "multidim runs titiler.xarray from the titiler image"
+    set:
+      raster.enabled: false
+      stac.enabled: false
+      vector.enabled: false
+      multidim.enabled: true
+    template: templates/services/multidim/deployment.yaml
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].image
+          pattern: '^ghcr\.io/developmentseed/titiler:'
+      - equal:
+          path: spec.template.spec.containers[0].command[0]
+          value: "uvicorn"
+      - equal:
+          path: spec.template.spec.containers[0].command[1]
+          value: "titiler.xarray.main:app"
+
   - it: "multidim deployment includes configmap checksum annotation"
     set:
       multidim.enabled: true

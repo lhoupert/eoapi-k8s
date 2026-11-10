@@ -441,13 +441,14 @@ multidim:
       # so when the average unit among these pods is <requestRate>/1000 then scale
       # you can watch the actual/target in real time using `kubectl get hpa/<name>`
       requestRate: 100000m
+  # Zarr only (titiler.xarray); NetCDF/HDF are not supported. See docs/configuration.md
   image:
-    name: ghcr.io/developmentseed/titiler-md-demo
-    tag: 6406b10406287ba9d3f345706d0c2be5f0265e02
+    name: ghcr.io/developmentseed/titiler
+    tag: "2.4.0"
     pullPolicy: IfNotPresent
   command:
     - "uvicorn"
-    - "titiler_md_demo.main:app"
+    - "titiler.xarray.main:app"
     - "--host=$(HOST)"
     - "--port=$(PORT)"
   settings:

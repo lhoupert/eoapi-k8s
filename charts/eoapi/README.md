@@ -8,7 +8,7 @@ A Helm chart for deploying Earth Observation APIs with integrated STAC, raster, 
 - STAC Auth Proxy for authentication/authorization (optional)
 - Raster tile services (TiTiler)
 - Vector tile services (TIPG)
-- Multidimensional data support
+- Multidimensional (Zarr) data support via titiler.xarray
 - Built-in STAC Browser interface
 - Flexible database configuration
 - Real-time PostgreSQL notifications for STAC item changes

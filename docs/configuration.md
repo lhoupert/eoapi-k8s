@@ -340,6 +340,47 @@ raster:
 
 Assets without a matching `alternate` entry keep using their main `href`.
 
+### Multidimensional Service (multidim)
+
+`multidim` (off by default) serves `/multidim` with [titiler.xarray](https://github.com/developmentseed/titiler/tree/main/src/titiler/xarray): the `ghcr.io/developmentseed/titiler` image running `titiler.xarray.main:app`. It reads **Zarr only**. NetCDF/HDF files are not supported, and a titiler maintainer expects the next major release to support GeoZarr only ([eoapi-k8s#676](https://github.com/developmentseed/eoapi-k8s/issues/676)), so plan to serve data as (Geo)Zarr.
+
+Earlier chart versions ran `ghcr.io/developmentseed/titiler-md-demo` (titiler.xarray 0.21.1). The path, Service and Deployment names, port, probes and the `/healthz`, `/api` and `/api.html` endpoints are unchanged. The rest of the API changed:
+
+| **titiler-md-demo** | **titiler.xarray** |
+|:--------------------|:-------------------|
+| `/` returns HTML only | JSON unless `Accept: text/html` or `?f=html` |
+| `.nc` / `.nc4` URLs | Not supported: Zarr only |
+| `datetime=`, `drop_dim=` | `sel=time=2024-01-01` or `sel=time=nearest::2024-01-01` (the old parameters are silently ignored) |
+| First time step picked automatically | Select it with `sel` or `bidx` |
+| `/variables` | `/dataset/keys` |
+| `/dims` | `/dataset/dimensions` or `/info?show_times=true` |
+| `/bounds` | Removed: use `/info` |
+| `/{tms}/map` | `/{tms}/map.html` |
+| `/{tms}/WMTSCapabilities.xml` | Removed |
+| `@2x` tile suffix | `tilesize=` (tilejson defaults to 512) |
+| `APP_*` settings (CORS, cache-control) | `TITILER_XARRAY_API_*` |
+
+Also check before upgrading:
+
+- Remote reads go through obstore instead of s3fs. For `s3://` URLs the app first requests `https://{bucket}.s3.amazonaws.com` to infer the bucket region, which can fail with MinIO or without egress.
+- s3fs/botocore and GDAL S3 settings no longer apply to Zarr reads. S3-compatible endpoints are set through the `AWS_*` variables obstore reads (for example `AWS_ENDPOINT_URL`). Plain `http://` endpoints such as an in-cluster MinIO may not work, because titiler does not pass obstore's `allow_http` client option. Untested.
+- The container runs as uid 65532 (`nonroot`) instead of 1000. Check any `runAsUser` you set in `multidim.settings.securityContext` or `podSecurityContext`.
+- titiler.xarray keeps every opened dataset in an unbounded in-memory cache, so set `multidim.settings.resources.limits.memory`.
+
+To keep NetCDF for now, pin the old image. This is unsupported and will be removed:
+
+```yaml
+multidim:
+  image:
+    name: ghcr.io/developmentseed/titiler-md-demo
+    tag: 0f63f151a05f66a3f026ab2d85575e6083aa0f6b
+  command:
+    - "uvicorn"
+    - "titiler_md_demo.main:app"
+    - "--host=$(HOST)"
+    - "--port=$(PORT)"
+```
+
 ## STAC Browser
 
 | **Values Key** | **Description** | **Default** | **Choices** |
