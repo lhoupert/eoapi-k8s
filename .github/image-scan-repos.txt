@@ -9,7 +9,7 @@ gcr.io/knative-releases/knative.dev/operator/cmd/operator
 gcr.io/knative-releases/knative.dev/operator/cmd/webhook
 ghcr.io/developmentseed/eoapi-notifier
 ghcr.io/developmentseed/stac-auth-proxy
-ghcr.io/developmentseed/tipg
+ghcr.io/developmentseed/tipg report-only until 2026-11-30: fork test
 ghcr.io/developmentseed/titiler-md-demo
 ghcr.io/radiantearth/stac-browser
 ghcr.io/stac-utils/pgstac-pypgstac
