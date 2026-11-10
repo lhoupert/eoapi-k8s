@@ -663,7 +663,7 @@ vector:
       requestRate: 100000m
   image:
     name: ghcr.io/developmentseed/tipg
-    tag: 1.6.1
+    tag: 0.0.0-does-not-exist
     pullPolicy: IfNotPresent
   command:
     - "uvicorn"
