@@ -26,6 +26,8 @@ COMMANDS:
     lint            Run Helm lint on chart
     unit            Run Helm unit tests
     images          Check container images for root user
+    gitsha          Test gitSha injection script
+    queryables      Run rendered load-queryables script with a stub pypgstac
     integration     Run integration tests with pytest
     notification    Run notification tests with database access
     all             Run all tests
@@ -49,6 +51,9 @@ EXAMPLES:
 
     # Run integration tests with debug
     $(basename "$0") integration --debug
+
+    # Run integration tests with pytest filter (flags after subcommand)
+    $(basename "$0") integration --pytest-args "-v -k test_browser"
 
     # Run all tests
     $(basename "$0") all
@@ -99,13 +104,16 @@ test_unit() {
 
     check_requirements helm || return 1
 
+    log_debug "Updating Helm chart dependencies..."
+    ensure_chart_dependencies "$CHART_PATH" || true
+
     if ! helm plugin list 2>/dev/null | grep -q unittest; then
         log_error "Helm unittest plugin not installed"
         log_info "Install it with: curl -fsSL https://raw.githubusercontent.com/helm-unittest/helm-unittest/main/install-binary.sh | bash"
         return 1
     fi
 
-    if helm unittest "$CHART_PATH"; then
+    if helm unittest "$CHART_PATH" -f 'tests/*_test.yaml' -f 'tests/*_tests.yaml' --color; then
         log_success "Unit tests passed"
     else
         log_error "Unit tests failed"
@@ -119,6 +127,22 @@ test_images() {
     check_requirements docker helm || return 1
 
     "${SCRIPT_DIR}/test/images.sh"
+}
+
+test_gitsha() {
+    log_info "Testing gitSha injection..."
+
+    check_requirements git || return 1
+
+    "${SCRIPT_DIR}/test/gitsha.sh"
+}
+
+test_queryables() {
+    log_info "Testing load-queryables job rendering..."
+
+    check_requirements helm yq || return 1
+
+    "${SCRIPT_DIR}/test/queryables.sh"
 }
 
 test_integration() {
@@ -147,6 +171,8 @@ test_all() {
     test_schema || ((failed++))
     test_lint || ((failed++))
     test_unit || ((failed++))
+    test_gitsha || ((failed++))
+    test_queryables || ((failed++))
     test_images || ((failed++))
 
     if validate_cluster 2>/dev/null; then
@@ -192,10 +218,9 @@ main() {
                 pytest_args="$2"
                 shift 2
                 ;;
-            schema|lint|unit|images|notification|integration|all)
+            schema|lint|unit|images|gitsha|queryables|notification|integration|all)
                 command="$1"
                 shift
-                break
                 ;;
             *)
                 log_error "Unknown option: $1"
@@ -219,6 +244,12 @@ main() {
             ;;
         images)
             test_images
+            ;;
+        gitsha)
+            test_gitsha
+            ;;
+        queryables)
+            test_queryables
             ;;
         integration)
             test_integration "$pytest_args"

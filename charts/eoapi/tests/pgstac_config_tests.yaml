@@ -1,8 +1,10 @@
 suite: pgstac configuration tests
 templates:
-  - templates/pgstacbootstrap/configmap.yaml
-  - templates/pgstacbootstrap/queue-processor.yaml
-  - templates/pgstacbootstrap/extent-updater.yaml
+  - templates/_helpers/core.tpl
+  - templates/_helpers/database.tpl
+  - templates/database/pgstacbootstrap/configmap.yaml
+  - templates/database/pgstacbootstrap/queue-processor.yaml
+  - templates/database/pgstacbootstrap/maintenance.yaml
 tests:
   # PgSTAC Settings Tests
   - it: should apply custom pgstac settings
@@ -13,10 +15,10 @@ tests:
           pgstacSettings:
             queue_timeout: "30 minutes"
             use_queue: "false"
-            update_collection_extent: "true"
+            update_collection_extent: "scheduled"
             context: "on"
             context_estimated_count: "50000"
-    template: templates/pgstacbootstrap/configmap.yaml
+    template: templates/database/pgstacbootstrap/configmap.yaml
     documentIndex: 0
     asserts:
       - matchRegex:
@@ -27,7 +29,7 @@ tests:
           pattern: "VALUES \\('use_queue', 'false'\\)"
       - matchRegex:
           path: data["pgstac-settings.sql"]
-          pattern: "VALUES \\('update_collection_extent', 'true'\\)"
+          pattern: "VALUES \\('update_collection_extent', 'false'\\)"
       - matchRegex:
           path: data["pgstac-settings.sql"]
           pattern: "VALUES \\('context_estimated_count', '50000'\\)"
@@ -36,7 +38,7 @@ tests:
     set:
       pgstacBootstrap:
         enabled: true
-    template: templates/pgstacbootstrap/configmap.yaml
+    template: templates/database/pgstacbootstrap/configmap.yaml
     documentIndex: 0
     asserts:
       - matchRegex:
@@ -57,7 +59,7 @@ tests:
         settings:
           pgstacSettings:
             use_queue: "true"
-    template: templates/pgstacbootstrap/queue-processor.yaml
+    template: templates/database/pgstacbootstrap/queue-processor.yaml
     asserts:
       - hasDocuments:
           count: 1
@@ -69,6 +71,9 @@ tests:
       - equal:
           path: spec.schedule
           value: "0 * * * *"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: Never
 
   - it: should NOT create queue processor when use_queue is false
     set:
@@ -77,7 +82,7 @@ tests:
         settings:
           pgstacSettings:
             use_queue: "false"
-    template: templates/pgstacbootstrap/queue-processor.yaml
+    template: templates/database/pgstacbootstrap/queue-processor.yaml
     asserts:
       - hasDocuments:
           count: 0
@@ -91,24 +96,25 @@ tests:
             use_queue: "true"
           queueProcessor:
             schedule: "*/15 * * * *"
-    template: templates/pgstacbootstrap/queue-processor.yaml
+    template: templates/database/pgstacbootstrap/queue-processor.yaml
     asserts:
       - equal:
           path: spec.schedule
           value: "*/15 * * * *"
-      - matchRegex:
+      - equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].command[2]
-          pattern: "CALL run_queued_queries\\(\\);"
+          value: |
+            psql -c "SET search_path TO pgstac, public" -c "CALL pgstac.run_queued_queries();"
 
-  # Extent Updater Tests
-  - it: should create extent updater when update_collection_extent is false
+  # Maintenance Tests
+  - it: should create maintenance when update_collection_extent is scheduled
     set:
       pgstacBootstrap:
         enabled: true
         settings:
           pgstacSettings:
-            update_collection_extent: "false"
-    template: templates/pgstacbootstrap/extent-updater.yaml
+            update_collection_extent: "scheduled"
+    template: templates/database/pgstacbootstrap/maintenance.yaml
     asserts:
       - hasDocuments:
           count: 1
@@ -116,40 +122,77 @@ tests:
           of: CronJob
       - equal:
           path: metadata.name
-          value: RELEASE-NAME-pgstac-extent-updater
+          value: RELEASE-NAME-pgstac-maintenance
       - equal:
           path: spec.schedule
           value: "0 2 * * *"
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.restartPolicy
+          value: Never
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command[2]
+          value: |
+            set -e
+            psql -c "SET search_path TO pgstac, public" -c "SELECT pgstac.update_collection_extents();"
 
-  - it: should NOT create extent updater when update_collection_extent is true
-    set:
-      pgstacBootstrap:
-        enabled: true
-        settings:
-          pgstacSettings:
-            update_collection_extent: "true"
-    template: templates/pgstacbootstrap/extent-updater.yaml
-    asserts:
-      - hasDocuments:
-          count: 0
-
-  - it: should use custom extent updater schedule
+  - it: should NOT create maintenance when update_collection_extent is false
     set:
       pgstacBootstrap:
         enabled: true
         settings:
           pgstacSettings:
             update_collection_extent: "false"
-          extentUpdater:
+    template: templates/database/pgstacbootstrap/maintenance.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: should run ANALYZE after extents with custom maintenance settings
+    set:
+      pgstacBootstrap:
+        enabled: true
+        settings:
+          analyze: both
+          pgstacSettings:
+            update_collection_extent: "scheduled"
+          maintenance:
             schedule: "0 */6 * * *"
-    template: templates/pgstacbootstrap/extent-updater.yaml
+            activeDeadlineSeconds: 3600
+          extraEnv:
+            - name: PGOPTIONS
+              value: "-c statement_timeout=0"
+    template: templates/database/pgstacbootstrap/maintenance.yaml
     asserts:
       - equal:
           path: spec.schedule
           value: "0 */6 * * *"
-      - matchRegex:
+      - equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].command[2]
-          pattern: "SELECT update_collection_extents\\(\\);"
+          value: |
+            set -e
+            psql -c "SET search_path TO pgstac, public" -c "SELECT pgstac.update_collection_extents();"
+            psql -c "ANALYZE;"
+      - equal:
+          path: spec.jobTemplate.spec.activeDeadlineSeconds
+          value: 3600
+      - contains:
+          path: spec.jobTemplate.spec.template.spec.containers[0].env
+          content:
+            name: PGOPTIONS
+            value: "-c statement_timeout=0"
+
+  - it: should run only ANALYZE when analyze is scheduled
+    set:
+      pgstacBootstrap:
+        settings:
+          analyze: scheduled
+    template: templates/database/pgstacbootstrap/maintenance.yaml
+    asserts:
+      - equal:
+          path: spec.jobTemplate.spec.template.spec.containers[0].command[2]
+          value: |
+            set -e
+            psql -c "ANALYZE;"
 
   # Combined scenario tests
   - it: should create both cronjobs with proper settings
@@ -159,10 +202,10 @@ tests:
         settings:
           pgstacSettings:
             use_queue: "true"
-            update_collection_extent: "false"
+            update_collection_extent: "scheduled"
     templates:
-      - templates/pgstacbootstrap/queue-processor.yaml
-      - templates/pgstacbootstrap/extent-updater.yaml
+      - templates/database/pgstacbootstrap/queue-processor.yaml
+      - templates/database/pgstacbootstrap/maintenance.yaml
     asserts:
       - hasDocuments:
           count: 1
@@ -174,8 +217,8 @@ tests:
       pgstacBootstrap:
         enabled: false
     templates:
-      - templates/pgstacbootstrap/queue-processor.yaml
-      - templates/pgstacbootstrap/extent-updater.yaml
+      - templates/database/pgstacbootstrap/queue-processor.yaml
+      - templates/database/pgstacbootstrap/maintenance.yaml
     asserts:
       - hasDocuments:
           count: 0
@@ -188,7 +231,7 @@ tests:
         settings:
           pgstacSettings:
             use_queue: "true"
-    template: templates/pgstacbootstrap/queue-processor.yaml
+    template: templates/database/pgstacbootstrap/queue-processor.yaml
     asserts:
       - equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu
@@ -197,14 +240,14 @@ tests:
           path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.memory
           value: "512Mi"
 
-  - it: should set correct resource limits for extent updater
+  - it: should set correct resource limits for maintenance
     set:
       pgstacBootstrap:
         enabled: true
         settings:
           pgstacSettings:
-            update_collection_extent: "false"
-    template: templates/pgstacbootstrap/extent-updater.yaml
+            update_collection_extent: "scheduled"
+    template: templates/database/pgstacbootstrap/maintenance.yaml
     asserts:
       - equal:
           path: spec.jobTemplate.spec.template.spec.containers[0].resources.limits.cpu

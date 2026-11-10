@@ -6,7 +6,7 @@ metadata:
     {{- include "eoapi.labels" . | nindent 4 }}
     app.kubernetes.io/component: multidim
     app: {{ .Release.Name }}-multidim
-    gitsha: {{ .Values.gitSha }}
+    gitsha: {{ include "eoapi.gitSha" . }}
   name: {{ .Release.Name }}-multidim
   {{- if .Values.multidim.annotations }}
   annotations:
@@ -41,7 +41,8 @@ spec:
     spec:
       {{- include "eoapi.pgstacInitContainers" . | nindent 6 }}
       containers:
-      - image: {{ .Values.multidim.image.name }}:{{ .Values.multidim.image.tag }}
+      - image: {{ include "eoapi.containerImage" .Values.multidim.image }}
+        imagePullPolicy: {{ .Values.multidim.image.pullPolicy | default "IfNotPresent" }}
         name: multidim
         command:
           {{- toYaml .Values.multidim.command | nindent 10 }}
@@ -88,6 +89,10 @@ spec:
           - containerPort: {{ .Values.service.port }}
         resources:
           {{- toYaml .Values.multidim.settings.resources | nindent 10 }}
+        {{- with .Values.multidim.settings.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         env:
           {{- include "eoapi.postgresqlEnv" . | nindent 10 }}
           {{- include "eoapi.commonEnvVars" (dict "service" "multidim" "root" .) | nindent 10 }}
@@ -107,6 +112,10 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       serviceAccountName: {{ include "eoapi.serviceAccountName" . }}
+      {{- with .Values.multidim.settings.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.multidim.settings.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

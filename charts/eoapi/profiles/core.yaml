@@ -7,7 +7,9 @@
 #   helm upgrade eoapi ./charts/eoapi -f profiles/core.yaml
 
 # Core services only
-testing: false
+testing:
+  mockOidcServer:
+    enabled: false
 
 ######################
 # DATABASE
@@ -164,7 +166,6 @@ observability:
 ingress:
   enabled: true
   className: "nginx"
-  pathType: "Prefix"
   host: ""
   tls:
     enabled: false

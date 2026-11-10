@@ -73,28 +73,35 @@ monitoring:
     enabled: true
   prometheus:
     enabled: true
-    server:
-      persistentVolume:
-        enabled: true
-        size: 50Gi
-      retention: "30d"
-    kube-state-metrics:
+
+prometheus:
+  server:
+    persistentVolume:
       enabled: true
-    prometheus-node-exporter:
-      enabled: true
+      size: 50Gi
+    retention: "30d"
+  kube-state-metrics:
+    enabled: true
+  prometheus-node-exporter:
+    enabled: true
 ```
 
 #### Observability Chart Configuration
 
+`observability.grafana.enabled` is only the on/off switch (it's the `condition` on
+the `grafana` dependency in `Chart.yaml`); actual subchart configuration -
+persistence, service type, resources, datasources - must go under the top-level
+`grafana:` key instead, matching the dependency name:
+
 ```yaml
+observability:
+  grafana:
+    enabled: true
+
 # Basic Grafana setup
 grafana:
-  enabled: true
   service:
     type: LoadBalancer
-
-# Connect to external Prometheus (if not using eoapi's Prometheus)
-prometheusUrl: "http://prometheus.monitoring.svc.cluster.local"
 
 # Production Grafana configuration
 grafana:
@@ -140,14 +147,81 @@ When prometheus-adapter and nginx ingress are both enabled, these custom metrics
 - Ingress must use specific hostnames (not wildcard patterns)
 - prometheus-adapter must be configured to expose these metrics
 
+### Application Metrics
+
+The `raster` (titiler-pgstac), `vector` (tipg), and `stac` (stac-fastapi-pgstac)
+services can natively expose a Prometheus metrics endpoint with request-count and
+latency histograms broken down by a low-cardinality `operation` label (e.g.
+`tiles`, `search`, `list_items`). This is opt-in
+per service and requires `monitoring.prometheus.enabled=true` for Prometheus to
+discover and scrape the endpoint:
+
+```yaml
+monitoring:
+  prometheus:
+    enabled: true
+
+raster:
+  metrics:
+    enabled: true  # exposes titiler_pgstac_http_requests_total, titiler_pgstac_http_request_duration_seconds at /metrics
+
+vector:
+  metrics:
+    enabled: true  # exposes tipg_http_requests_total, tipg_http_request_duration_seconds at /metrics
+
+stac:
+  metrics:
+    enabled: true  # exposes generic http_requests_total, http_request_duration_seconds at /_mgmt/metrics
+```
+
+`stac`'s metrics require `stac-fastapi-pgstac>=7.0.0` (the chart's pinned tag);
+unlike raster/vector, its metric names are unprefixed, matching
+`stac-fastapi-api`'s shared implementation.
+
+`stac-auth-proxy` (when `stac-auth-proxy.enabled=true`) exposes its own
+`/_mgmt/metrics` endpoint by default — no toggle needed — with generic
+`http_requests_total` / `http_request_duration_seconds` metrics. It's scraped via
+a dedicated `prometheus.extraScrapeConfigs` entry rather than pod annotations,
+since the vendored `stac-auth-proxy` subchart doesn't yet expose a
+`prometheus.io/scrape` annotation hook.
+
+### Prometheus Operator (ServiceMonitor)
+
+Clusters running [prometheus-operator](https://github.com/prometheus-operator/prometheus-operator)
+(rather than, or alongside, this chart's bundled `monitoring.prometheus`) don't
+discover targets via `prometheus.io/scrape` annotations — their `Prometheus`
+custom resource only picks up `ServiceMonitor` objects matching its
+`serviceMonitorSelector`. Each service above has a matching
+`metrics.serviceMonitor` toggle (`stac-auth-proxy.serviceMonitor` for the proxy)
+that creates one, gated on the `ServiceMonitor` CRD actually being installed:
+
+```yaml
+raster:
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+      # Match your Prometheus CR's serviceMonitorSelector, e.g. for kube-prometheus-stack:
+      additionalLabels:
+        release: prometheus
+```
+
+Without a matching label, most prometheus-operator installs will silently ignore
+the `ServiceMonitor` — check your `Prometheus` CR's `spec.serviceMonitorSelector`
+for the expected label. This is independent of `monitoring.prometheus.enabled`:
+you can use either mechanism, or both.
+
 ## Pre-built Dashboards
 
 The `eoapi-observability` chart provides ready-to-use dashboards:
 
-### eoAPI Services Dashboard
+### eoAPI Services Dashboards
+Per-service dashboards (raster, vector, stac, stac-auth-proxy) backed by the
+[application metrics](#application-metrics) above, when enabled:
 - Request rates per service
 - Response times and error rates
-- Traffic patterns by endpoint
+- Traffic patterns by operation
 
 ### Infrastructure Dashboard
 - CPU usage rate by pod
@@ -170,25 +244,28 @@ The `eoapi-observability` chart provides ready-to-use dashboards:
 ```yaml
 monitoring:
   prometheus:
-    server:
-      # Persistent storage
-      persistentVolume:
-        enabled: true
-        size: 100Gi
-        storageClass: "gp3"
-      # Retention policy
-      retention: "30d"
-      # Resource allocation
-      resources:
-        limits:
-          cpu: "2000m"
-          memory: "4096Mi"
-        requests:
-          cpu: "1000m"
-          memory: "2048Mi"
-      # Security - internal access only
-      service:
-        type: ClusterIP
+    enabled: true
+
+prometheus:
+  server:
+    # Persistent storage
+    persistentVolume:
+      enabled: true
+      size: 100Gi
+      storageClass: "gp3"
+    # Retention policy
+    retention: "30d"
+    # Resource allocation
+    resources:
+      limits:
+        cpu: "2000m"
+        memory: "4096Mi"
+      requests:
+        cpu: "1000m"
+        memory: "2048Mi"
+    # Security - internal access only
+    service:
+      type: ClusterIP
 ```
 
 ### Resource Requirements
@@ -265,8 +342,11 @@ kubectl exec -it deployment/eoapi-obs-grafana -n eoapi -- \
 Enable alertmanager for alert management:
 
 ```yaml
+monitoring:
+  prometheus:
+    enabled: true
+
 prometheus:
-  enabled: true
   alertmanager:
     enabled: true
     config:
@@ -289,8 +369,11 @@ prometheus:
 Enable pushgateway for batch job metrics:
 
 ```yaml
+monitoring:
+  prometheus:
+    enabled: true
+
 prometheus:
-  enabled: true
   prometheus-pushgateway:
     enabled: true  # For batch job metrics collection
 ```

@@ -2,13 +2,12 @@
   "$schema": "http://json-schema.org/schema#",
   "type": "object",
   "required": [
-    "service",
-    "gitSha"
+    "service"
   ],
   "properties": {
     "gitSha": {
       "type": "string",
-      "description": "Git SHA of the deployment"
+      "description": "Optional git SHA override for deployment tracking. Published charts inject the release commit at package time; otherwise falls back to chart version."
     },
     "serviceAccount": {
       "type": "object",
@@ -34,6 +33,17 @@
         "labels": {
           "type": "object",
           "description": "Labels to add to the service account"
+        }
+      }
+    },
+    "rbac": {
+      "type": "object",
+      "description": "Role-based access control configuration",
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create RBAC resources (Role, RoleBinding, ClusterRole, ClusterRoleBinding). Independent of serviceAccount.create."
         }
       }
     },
@@ -63,7 +73,11 @@
             "nginx",
             "traefik"
           ],
-          "description": "Ingress controller class name"
+          "description": "Supported ingress controller class name (NGINX or Traefik only)"
+        },
+        "entrypoints": {
+          "type": "string",
+          "description": "Traefik only: value for the router entrypoints annotation (e.g. \"websecure\" or \"web,websecure\"). Empty attaches to all entrypoints."
         },
         "rootPath": {
           "type": "string",
@@ -94,18 +108,6 @@
             "secretName": {
               "type": "string",
               "description": "TLS secret name"
-            },
-            "certManager": {
-              "type": "boolean",
-              "description": "Use cert-manager for TLS"
-            },
-            "certManagerIssuer": {
-              "type": "string",
-              "description": "cert-manager issuer to use"
-            },
-            "certManagerEmail": {
-              "type": "string",
-              "description": "Email address for cert-manager"
             }
           }
         }
@@ -245,17 +247,10 @@
           "description": "Enable PgSTAC bootstrap"
         },
         "image": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "PgSTAC bootstrap image name"
-            },
-            "tag": {
-              "type": "string",
-              "description": "PgSTAC bootstrap image tag"
-            }
-          }
+          "$ref": "#/definitions/containerImage"
+        },
+        "waitImage": {
+          "$ref": "#/definitions/containerImage"
         },
         "configMaps": {
           "type": "object",
@@ -346,6 +341,27 @@
               "type": "boolean",
               "description": "Load sample data"
             },
+            "analyze": {
+              "type": "string",
+              "enum": [
+                "off",
+                "afterBootstrap",
+                "scheduled",
+                "both"
+              ],
+              "default": "afterBootstrap",
+              "description": "When to run ANALYZE"
+            },
+            "extraEnv": {
+              "type": "array",
+              "description": "Extra env vars for pgstac Jobs/CronJobs",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name"
+                ]
+              }
+            },
             "user": {
               "type": "string",
               "description": "Database user"
@@ -357,6 +373,18 @@
             "resources": {
               "type": "object",
               "description": "Resource requirements"
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Container-level securityContext shared by all pgstacBootstrap Jobs/CronJobs (migrate, load-samples, load-queryables, superuser-init-db, maintenance, queue-processor)"
+            },
+            "podSecurityContext": {
+              "type": "object",
+              "description": "Pod-level securityContext shared by all pgstacBootstrap Jobs/CronJobs"
+            },
+            "initContainerSecurityContext": {
+              "type": "object",
+              "description": "Container-level securityContext for the wait-for-pgstac-jobs init container injected into the stac/raster/vector/multidim Deployments"
             },
             "pgstacSettings": {
               "type": "object",
@@ -380,10 +408,11 @@
                   "type": "string",
                   "enum": [
                     "true",
-                    "false"
+                    "false",
+                    "scheduled"
                   ],
                   "default": "true",
-                  "description": "Auto-update collection extents when items are added/modified"
+                  "description": "Update collection extents on item writes (true), never (false), or via the maintenance CronJob (scheduled)"
                 },
                 "context": {
                   "type": "string",
@@ -420,17 +449,41 @@
                   "type": "string",
                   "default": "0 * * * *",
                   "description": "Cron schedule for processing queued queries"
+                },
+                "activeDeadlineSeconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1,
+                  "description": "Maximum runtime per run in seconds"
+                },
+                "resources": {
+                  "type": "object",
+                  "description": "Resource requirements"
                 }
               }
             },
-            "extentUpdater": {
+            "maintenance": {
               "type": "object",
-              "description": "Extent updater CronJob configuration (active when update_collection_extent is false)",
+              "description": "Maintenance CronJob configuration",
               "properties": {
                 "schedule": {
                   "type": "string",
                   "default": "0 2 * * *",
-                  "description": "Cron schedule for updating collection extents"
+                  "description": "Cron schedule"
+                },
+                "activeDeadlineSeconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1,
+                  "description": "Maximum runtime per run in seconds"
+                },
+                "resources": {
+                  "type": "object",
+                  "description": "Resource requirements"
                 }
               }
             },
@@ -554,17 +607,7 @@
           "description": "Number of replicas"
         },
         "image": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Image name"
-            },
-            "tag": {
-              "type": "string",
-              "description": "Image tag"
-            }
-          }
+          "$ref": "#/definitions/containerImage"
         },
         "ingress": {
           "type": "object",
@@ -572,6 +615,10 @@
             "enabled": {
               "type": "boolean",
               "description": "Enable ingress for browser"
+            },
+            "path": {
+              "type": "string",
+              "description": "Ingress path prefix for the browser service"
             }
           }
         },
@@ -581,6 +628,14 @@
             "resources": {
               "type": "object",
               "description": "Resource requirements for browser"
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Container-level securityContext for the browser container"
+            },
+            "podSecurityContext": {
+              "type": "object",
+              "description": "Pod-level securityContext for the browser Deployment"
             }
           }
         }
@@ -599,12 +654,23 @@
           "default": "",
           "description": "When set, root path / redirects to this URL instead of showing the landing page (e.g. /browser/)"
         },
+        "image": {
+          "$ref": "#/definitions/containerImage"
+        },
         "settings": {
           "type": "object",
           "properties": {
             "resources": {
               "type": "object",
               "description": "Resource requirements for doc server"
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Container-level securityContext for the doc-server container"
+            },
+            "podSecurityContext": {
+              "type": "object",
+              "description": "Pod-level securityContext for the doc-server Deployment"
             }
           }
         }
@@ -665,6 +731,43 @@
               ],
               "default": "INFO",
               "description": "Log level for eoapi-notifier"
+            },
+            "filters": {
+              "type": "array",
+              "description": "Optional event filters applied before output fan-out (OR between blocks, AND within each block)",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "collections": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Restrict forwarding to these collection IDs"
+                  },
+                  "operations": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "create",
+                        "replace",
+                        "delete"
+                      ]
+                    },
+                    "description": "Restrict forwarding to these operations"
+                  },
+                  "bbox": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": "Restrict forwarding to items overlapping this bounding box [west, south, east, north]"
+                  }
+                }
+              }
             }
           }
         },
@@ -751,10 +854,172 @@
             "enabled": {
               "type": "boolean",
               "description": "Enable mock OIDC server"
+            },
+            "image": {
+              "$ref": "#/definitions/containerImage"
+            },
+            "ingress": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Expose mock OIDC server via unified ingress"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Ingress path prefix for the mock OIDC server"
+                }
+              }
+            },
+            "service": {
+              "type": "object",
+              "properties": {
+                "port": {
+                  "type": "integer",
+                  "description": "Service port for the mock OIDC server"
+                }
+              }
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Container-level securityContext for the mock OIDC server container"
+            },
+            "podSecurityContext": {
+              "type": "object",
+              "description": "Pod-level securityContext for the mock OIDC server Deployment"
             }
           }
         }
       }
+    },
+    "knative": {
+      "type": "object",
+      "description": "Optional Knative components for CloudEvents and serverless workloads",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Knative components"
+        },
+        "cloudEventsSink": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable CloudEvents sink"
+            },
+            "image": {
+              "$ref": "#/definitions/containerImage"
+            },
+            "resources": {
+              "type": "object",
+              "description": "Resource requirements for the cloudevents-sink container"
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Container-level securityContext for the cloudevents-sink container"
+            },
+            "podSecurityContext": {
+              "type": "object",
+              "description": "Pod-level securityContext for the cloudevents-sink Knative Service"
+            }
+          }
+        },
+        "jobs": {
+          "type": "object",
+          "properties": {
+            "init": {
+              "type": "object",
+              "properties": {
+                "image": {
+                  "$ref": "#/definitions/containerImage"
+                },
+                "securityContext": {
+                  "type": "object",
+                  "description": "Container-level securityContext for the knative-init container"
+                },
+                "podSecurityContext": {
+                  "type": "object",
+                  "description": "Pod-level securityContext for the knative-init Job"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "prometheus": {
+      "type": "object",
+      "description": "Values passed to the prometheus Helm sub-chart",
+      "properties": {
+        "alertmanager": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "kube-state-metrics": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "prometheus-node-exporter": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "prometheus-pushgateway": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "server": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "prometheus-adapter": {
+      "type": "object",
+      "description": "Values passed to the prometheus-adapter Helm sub-chart",
+      "properties": {
+        "prometheus": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "Prometheus server URL for custom metrics queries"
+            },
+            "port": {
+              "type": "integer",
+              "description": "Prometheus server port"
+            },
+            "path": {
+              "type": "string",
+              "description": "Prometheus server path prefix"
+            }
+          },
+          "additionalProperties": true
+        },
+        "rules": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "type": "boolean",
+              "description": "Enable default prometheus-adapter resource rules"
+            },
+            "custom": {
+              "type": "array",
+              "description": "Custom metrics rules. name.as must match eoapi.hpaRequestRateMetricName per apiServices entry.",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "resources": {
+          "type": "object",
+          "description": "Resource requests and limits for prometheus-adapter"
+        }
+      },
+      "additionalProperties": true
     }
   },
   "definitions": {
@@ -771,6 +1036,36 @@
             "enabled": {
               "type": "boolean",
               "description": "Enable ingress for this service"
+            },
+            "path": {
+              "type": "string",
+              "description": "Ingress path prefix for this service"
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable the service's native Prometheus /metrics endpoint (requires monitoring.prometheus.enabled to be scraped)"
+            },
+            "serviceMonitor": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Create a prometheus-operator ServiceMonitor for this service (requires the ServiceMonitor CRD and metrics.enabled)"
+                },
+                "interval": {
+                  "type": "string",
+                  "description": "Scrape interval, e.g. 30s"
+                },
+                "additionalLabels": {
+                  "type": "object",
+                  "description": "Extra labels to match the cluster's Prometheus CR serviceMonitorSelector"
+                }
+              }
             }
           }
         },
@@ -818,17 +1113,7 @@
           }
         },
         "image": {
-          "type": "object",
-          "properties": {
-            "name": {
-              "type": "string",
-              "description": "Image name"
-            },
-            "tag": {
-              "type": "string",
-              "description": "Image tag"
-            }
-          }
+          "$ref": "#/definitions/containerImage"
         },
         "command": {
           "type": "array",
@@ -867,8 +1152,44 @@
             "envVars": {
               "type": "object",
               "description": "Environment variables"
+            },
+            "securityContext": {
+              "type": "object",
+              "description": "Container-level securityContext for this service's container"
+            },
+            "podSecurityContext": {
+              "type": "object",
+              "description": "Pod-level securityContext for this service's Deployment"
             }
           }
+        }
+      }
+    },
+    "containerImage": {
+      "type": "object",
+      "description": "Container image reference. Prefer digest over tag when pinning immutable images.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Image name (registry/repository)"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag (ignored when digest is set)"
+        },
+        "digest": {
+          "type": "string",
+          "description": "Optional image digest (sha256:...). When set, overrides tag. Refresh when upgrading."
+        },
+        "pullPolicy": {
+          "type": "string",
+          "description": "Container image pull policy",
+          "default": "IfNotPresent",
+          "enum": [
+            "Always",
+            "IfNotPresent",
+            "Never"
+          ]
         }
       }
     }

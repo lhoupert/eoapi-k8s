@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 env:
-  HELM_VERSION: latest
+  HELM_VERSION: v3.18.3
   PGO_VERSION: "5.8.6"
 
 jobs:
@@ -15,13 +15,13 @@ jobs:
     name: Simple tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: '24'
+          node-version: '26'
 
       - name: Install Helm
-        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with:
           version: ${{ env.HELM_VERSION }}
 
@@ -42,8 +42,21 @@ jobs:
 
       - name: Run Helm unit tests
         run: |
-          helm plugin install https://github.com/helm-unittest/helm-unittest --verify=false
-          helm unittest charts/eoapi --color
+          helm repo add eoapi-k8s https://devseed.com/eoapi-k8s/
+          helm repo add knative https://knative.github.io/operator
+          helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo add grafana https://grafana.github.io/helm-charts
+          helm repo update
+          helm dependency build charts/eoapi
+          helm plugin install https://github.com/helm-unittest/helm-unittest
+          helm unittest charts/eoapi -f 'tests/*_test.yaml' -f 'tests/*_tests.yaml' --color
+
+      - name: Test gitSha injection script
+        run: ./eoapi-cli test gitsha
+
+      - name: Test load-queryables job rendering
+        run: ./eoapi-cli test queryables
 
       - name: Check container images for root user
         run: ./eoapi-cli test images
@@ -53,13 +66,13 @@ jobs:
     needs: fast-checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
 
       - name: Install Helm
-        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
         with:
           version: ${{ env.HELM_VERSION }}
 
@@ -88,8 +101,11 @@ jobs:
       - name: Wait until cluster is ready
         run: ./eoapi-cli cluster wait-ready
 
+      - name: Inject git SHA for deployment tracking
+        run: bash scripts/inject-chart-git-sha.sh charts/eoapi/values.yaml
+
       - name: Deploy eoAPI
-        run: ./eoapi-cli deployment run
+        run: ./eoapi-cli deployment run --profile k3d
 
       - name: Run integration tests
         run: ./eoapi-cli test integration
@@ -114,13 +130,13 @@ jobs:
     name: Validate documentation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
-          node-version: '24'
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+          node-version: '26'
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
 
       - name: Check documentation
         run: ./eoapi-cli docs check
