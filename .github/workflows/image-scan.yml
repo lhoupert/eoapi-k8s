@@ -6,6 +6,8 @@ on:
   schedule:
     - cron: '17 5 * * 1'
   workflow_dispatch:
+  push: # FORK TEST ONLY: workflow_dispatch needs the workflow on the default branch
+    branches: [ "test/image-scan**" ]
   pull_request:
     branches: [ "main" ]
 
