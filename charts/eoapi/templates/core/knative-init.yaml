@@ -3,7 +3,6 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: {{ .Release.Name }}-knative-init
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "eoapi.labels" . | nindent 4 }}
     app.kubernetes.io/component: knative-init
@@ -21,14 +20,18 @@ spec:
     spec:
       restartPolicy: Never
       serviceAccountName: {{ include "eoapi.serviceAccountName" . }}
+      {{- with .Values.knative.jobs.init.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
       - name: knative-init
-        image: alpine/kubectl:1.34.1
-        imagePullPolicy: IfNotPresent
+        image: {{ include "eoapi.containerImage" .Values.knative.jobs.init.image }}
+        imagePullPolicy: {{ .Values.knative.jobs.init.image.pullPolicy | default "IfNotPresent" }}
+        {{- with .Values.knative.jobs.init.securityContext }}
         securityContext:
-          runAsNonRoot: true
-          runAsUser: 65534
-          runAsGroup: 65534
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         command:
         - /bin/sh
         - -c

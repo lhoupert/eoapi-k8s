@@ -51,7 +51,8 @@ spec:
     spec:
       containers:
       - name: doc-server
-        image: nginxinc/nginx-unprivileged:alpine
+        image: {{ include "eoapi.containerImage" .Values.docServer.image }}
+        imagePullPolicy: {{ .Values.docServer.image.pullPolicy | default "IfNotPresent" }}
         volumeMounts:
         - name: {{ .Release.Name }}-doc-html
           mountPath: /usr/share/nginx/html
@@ -62,12 +63,20 @@ spec:
         resources:
           {{- toYaml . | nindent 10 }}
         {{- end }}
+        {{- with .Values.docServer.settings.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         {{- end }}
       volumes:
       - name: {{ .Release.Name }}-doc-html
         configMap:
           name: {{ .Release.Name }}-doc-server-html
       {{- if .Values.docServer.settings }}
+      {{- with .Values.docServer.settings.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.docServer.settings.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

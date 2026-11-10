@@ -24,7 +24,16 @@ Helper function for common environment variables
 - name: RELEASE_NAME
   value: {{ $root.Release.Name | quote }}
 - name: GIT_SHA
-  value: {{ $root.Values.gitSha | quote }}
+  value: {{ include "eoapi.gitSha" $root | quote }}
+{{- end -}}
+
+{{/*
+Return prometheus-adapter custom metric name for request-rate HPA per service.
+Canonical source for name.as in prometheus-adapter.rules.custom (values.yaml).
+Validated at render time by eoapi.validateHpaAdapterMetricAlignment.
+*/}}
+{{- define "eoapi.hpaRequestRateMetricName" -}}
+{{- printf "nginx_ingress_controller_requests_rate_%s_eoapi" .service -}}
 {{- end -}}
 
 {{/*
@@ -34,11 +43,12 @@ Helper function for common init containers to wait for pgstac jobs
 {{- if .Values.pgstacBootstrap.enabled }}
 initContainers:
 - name: wait-for-pgstac-jobs
-  image: alpine/kubectl:1.34.1
+  image: {{ include "eoapi.containerImage" .Values.pgstacBootstrap.waitImage }}
+  imagePullPolicy: {{ .Values.pgstacBootstrap.waitImage.pullPolicy | default "IfNotPresent" }}
+  {{- with .Values.pgstacBootstrap.settings.initContainerSecurityContext }}
   securityContext:
-    runAsNonRoot: true
-    runAsUser: 65534
-    runAsGroup: 65534
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   env:
   {{- include "eoapi.commonEnvVars" (dict "service" "init" "root" .) | nindent 2 }}
   resources:

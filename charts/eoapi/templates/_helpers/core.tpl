@@ -31,6 +31,19 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
+Resolve deployment git SHA: explicit value or chart version fallback.
+Published charts inject gitSha into values at release time.
+*/}}
+{{- define "eoapi.gitSha" -}}
+{{- $sha := .Values.gitSha -}}
+{{- if or (not $sha) (eq $sha "gitshaABC123") -}}
+{{- .Chart.Version -}}
+{{- else -}}
+{{- $sha -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Common labels
 */}}
 {{- define "eoapi.labels" -}}
@@ -60,3 +73,23 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Resolve a container image reference from an image values map.
+Uses name + tag, or name@digest when digest is set.
+*/}}
+{{- define "eoapi.containerImage" -}}
+{{- if .digest -}}
+{{- printf "%s@%s" .name .digest -}}
+{{- else -}}
+{{- printf "%s:%s" .name (required "image.tag is required when digest is unset" .tag) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render a value as JSON inside a single-quoted shell word, escaping embedded
+single quotes. Python Fire (used by pypgstac) parses the JSON array into a list.
+*/}}
+{{- define "eoapi.shellJsonArg" -}}
+{{- . | toJson | replace "'" "'\\''" | squote -}}
+{{- end -}}
