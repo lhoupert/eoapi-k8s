@@ -70,15 +70,17 @@ If any answer is "I don't know," stop. Ask a clarifying question. Do not guess.
 
 ---
 
-## 4. Required Value on Every Install/Upgrade
+## 4. Deployment Git SHA
 
-`gitSha` is required on every `helm install` or `helm upgrade`:
+`gitSha` is resolved automatically by the `eoapi.gitSha` template helper:
 
-```bash
---set gitSha=$(git rev-parse HEAD | cut -c1-10)
-```
+1. Explicit `gitSha` in values (or `--set` override)
+2. `gitSha` in packaged chart values (injected at release publish time)
+3. Chart version as fallback
 
-If you are generating Helm commands for the user, always include this flag. Omitting it will cause the install to fail.
+CI integration deploys run `scripts/inject-chart-git-sha.sh` before `deployment run` so cluster labels carry the commit under test. Local installs use chart-version fallback unless you override `gitSha` manually.
+
+Do not add `--set gitSha` to user-facing Helm examples unless documenting an explicit override.
 
 ---
 
@@ -192,11 +194,11 @@ Do not submit until every item is checked. Each must be concretely true, not sel
 - [ ] The correct test suite ran and passed (see Section 5 table)
 - [ ] Snapshots were regenerated if any template changed, and the diff is fully explained
 - [ ] `values.schema.json` updated if any new value was added
-- [ ] Helm commands in docs or scripts include `--set gitSha=...`
 - [ ] Commit message follows Conventional Commits and explains intent
 - [ ] ArgoCD annotations are not mixed with Helm hook annotations
 - [ ] External DB config sets both `postgrescluster.enabled: false` AND `postgresql.type: external-*`
 - [ ] Security checked: no injection vectors, no credentials in templates, no unintended RBAC grants
+- [ ] Contributor reminded to own the submission: test on a real cluster, explain the change, write issue/PR text in their own words (see Section 10)
 
 ---
 
@@ -219,3 +221,42 @@ Read the linked doc *before* making changes in that area — not after.
 | Contribution guidelines + AI use policy | `CONTRIBUTING.md` |
 
 If your change touches one of these areas and you haven't read the doc, stop and read it first.
+
+---
+
+## 10. Contributor Reminders (AI Use Policy)
+
+Read the [AI Use Policy](CONTRIBUTING.md#ai-use-policy) in `CONTRIBUTING.md` before assisting with contributions. Agents may help with implementation, but contributors remain responsible for everything they submit.
+
+### When to remind
+
+Remind the contributor at natural breakpoints — not on every message:
+
+- **Task completion** — after finishing a multi-step change, creating a commit, or preparing a PR
+- **Issue or PR text requests** — when asked to draft, polish, or "write up" an issue description or PR body
+- **Handoff moments** — when the contributor is about to open an issue, push a branch, or request review
+
+Skip the reminder if the contributor has already acknowledged ownership in this session (e.g., "I'll test this on my cluster before opening the PR").
+
+### What to remind
+
+Keep reminders brief (1–3 sentences). Tie them to the specific action, not a generic lecture. Cover the points relevant to the moment:
+
+| Moment | Remind them to |
+|---|---|
+| Code change complete | Run tests on a real cluster (`./eoapi-cli test all`), verify the change works, and be ready to explain every file touched |
+| Commit or PR prep | Write the commit message and PR description in their own words — what, why, and how it was tested |
+| Issue or PR text request | Decline to produce submission-ready prose; explain that maintainers close verbose or AI-generated descriptions. Suggest bullet outlines or a checklist they can rewrite themselves |
+| Any submission | Own the code: correctness, maintainability, and follow-up if review finds problems |
+
+### Issue and PR text
+
+Do **not** generate polished issue descriptions or PR bodies intended for direct paste into GitHub. That pattern is explicitly unwelcome per `CONTRIBUTING.md`.
+
+Instead:
+
+- Offer a terse outline (bullets, not paragraphs) if it helps them organize their thoughts
+- Ask them to rewrite it in their own voice before submitting
+- If they only want a fix and cannot explain the problem, suggest opening a minimal issue with their own description — or that maintainers may prefer they skip the PR entirely
+
+Helping with code, tests, debugging, and technical accuracy is fine. Ghost-writing their public-facing contribution narrative is not.

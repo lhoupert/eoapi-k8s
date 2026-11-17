@@ -7,7 +7,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "eoapi.fullname" . }}-mock-oidc-server
-  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "eoapi.labels" . | nindent 4 }}
     app.kubernetes.io/component: mock-oidc-server
@@ -27,10 +26,18 @@ spec:
       imagePullSecrets:
         {{- toYaml .Values.testing.mockOidcServer.imagePullSecrets | nindent 8 }}
       {{- end }}
+      {{- if .Values.testing.mockOidcServer.podSecurityContext }}
+      securityContext:
+        {{- toYaml .Values.testing.mockOidcServer.podSecurityContext | nindent 8 }}
+      {{- end }}
       containers:
       - name: mock-oidc
-        image: "{{ if .Values.testing.mockOidcServer.image }}{{ .Values.testing.mockOidcServer.image.repository | default "ghcr.io/alukach/mock-oidc-server" }}:{{ .Values.testing.mockOidcServer.image.tag | default "latest" }}{{ else }}ghcr.io/alukach/mock-oidc-server:latest{{ end }}"
-        imagePullPolicy: {{ if .Values.testing.mockOidcServer.image }}{{ .Values.testing.mockOidcServer.image.pullPolicy | default "IfNotPresent" }}{{ else }}IfNotPresent{{ end }}
+        image: {{ include "eoapi.containerImage" .Values.testing.mockOidcServer.image }}
+        imagePullPolicy: {{ .Values.testing.mockOidcServer.image.pullPolicy | default "IfNotPresent" }}
+        {{- if .Values.testing.mockOidcServer.securityContext }}
+        securityContext:
+          {{- toYaml .Values.testing.mockOidcServer.securityContext | nindent 10 }}
+        {{- end }}
         env:
         - name: MOCK_OIDC_PORT
           value: "{{ .Values.testing.mockOidcServer.port | default 8888 }}"

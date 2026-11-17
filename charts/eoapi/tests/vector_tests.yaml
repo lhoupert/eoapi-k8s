@@ -1,5 +1,8 @@
 suite: vector service tests
 templates:
+  - templates/_helpers/core.tpl
+  - templates/_helpers/database.tpl
+  - templates/_helpers/services.tpl
   - templates/services/vector/deployment.yaml
   - templates/services/vector/configmap.yaml
   - templates/services/vector/service.yaml
@@ -12,7 +15,6 @@ tests:
       vector.enabled: true
       multidim.enabled: false
 
-      gitSha: "ABC123"
     template: templates/services/vector/deployment.yaml
     asserts:
       - isKind:
@@ -23,21 +25,6 @@ tests:
       - equal:
           path: spec.strategy.type
           value: "RollingUpdate"
-      - equal:
-          path: spec.template.spec.containers[0].resources.limits.cpu
-          value: "768m"
-      - equal:
-          path: spec.template.spec.containers[0].resources.requests.cpu
-          value: "256m"
-      - equal:
-          path: spec.template.spec.containers[0].resources.limits.memory
-          value: "1024Mi"
-      - equal:
-          path: spec.template.spec.containers[0].resources.requests.memory
-          value: "256Mi"
-      - equal:
-          path: metadata.labels.gitsha
-          value: "ABC123"
 
   - it: "vector deployment includes configmap checksum annotation"
     set:
@@ -80,7 +67,6 @@ tests:
       vector.annotations:
         annotation1: hello
         annotation2: world
-      gitSha: "ABC123"
     template: templates/services/vector/service.yaml
     asserts:
       - isKind:
@@ -91,6 +77,9 @@ tests:
       - matchRegex:
           path: metadata.labels.app
           pattern: ^RELEASE-NAME-vector$
+      - equal:
+          path: spec.ports[0].name
+          value: http
       - equal:
           path: metadata.annotations.annotation1
           value: hello

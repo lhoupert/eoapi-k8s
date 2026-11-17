@@ -1,17 +1,13 @@
 comment_install: >
-  `service` and `gitSha` are required and defaulted value keys.
-  a manual installation looks like this:
+  A manual installation looks like this:
 
-  $ export GITSHA=$(git rev-parse HEAD | cut -c1-10)
   $ helm install \
       --namespace eoapi \
       --create-namespace \
-      --set gitSha=$GITSHA \
       eoapi \
       ./eoapi
 
-# the chart on the gh-pages branch will provide
-# the correct updated value otherwise it's defaulted
+# Replaced at chart publish time; falls back to chart version when unset.
 gitSha: "gitshaABC123"
 
 #######################
@@ -24,6 +20,14 @@ serviceAccount:
   annotations: {}
   labels: {}
 
+#######################
+# RBAC
+#######################
+# rbac.create controls whether Role, RoleBinding, ClusterRole, and
+# ClusterRoleBinding resources are created. Independent of serviceAccount.create.
+rbac:
+  create: true
+
 ######################
 # SERVICE & INGRESS
 ######################
@@ -35,12 +39,17 @@ ingress:
   enabled: true
   # ingressClassName: "nginx" or "traefik"
   className: "nginx"
+  # Traefik only: value for the router's `entrypoints` annotation, e.g. "websecure"
+  # or "web,websecure". Empty → the annotation is omitted and the router attaches to
+  # all Traefik entrypoints (Traefik's default). Note "web" is conventionally the
+  # HTTP entrypoint, so pinning to it alone will not serve HTTPS.
+  entrypoints: ""
   rootPath: ""        # Root path for doc server
   # Single host domain configuration (default)
   host: ""
   # Multiple host domains array - if specified, takes precedence over single host
   # hosts: []
-  # Custom annotations to add to the ingress
+  # Custom annotations (chart owns rewrite-target/use-regex/router.middlewares)
   annotations: {}
   # TLS configuration
   tls:
@@ -153,7 +162,13 @@ pgstacBootstrap:
   enabled: true
   image:
     name: ghcr.io/stac-utils/pgstac-pypgstac
-    tag: v0.10.0
+    tag: v0.9.12@sha256:672faad776b55afe15fadb27589c390c4fc93de5bc73e8889d2c29a600c5dba4
+    pullPolicy: IfNotPresent
+  # kubectl image used by service initContainers waiting on pgstac jobs
+  waitImage:
+    name: alpine/kubectl
+    tag: "1.34.2"
+    pullPolicy: IfNotPresent
   configMaps:
     pgstacSettings:
       annotations:
@@ -198,11 +213,18 @@ pgstacBootstrap:
         helm.sh/hook: "post-install,post-upgrade"
         helm.sh/hook-weight: "-3"
         helm.sh/hook-delete-policy: "before-hook-creation"
+    pgstacAnalyze:
+      annotations:
+        helm.sh/hook: "post-install,post-upgrade"
+        helm.sh/hook-weight: "-2"
+        helm.sh/hook-delete-policy: "before-hook-creation"
 
 
   settings:
     # General configuration options
-    loadSamples: true      # Set to false to disable sample data loading
+    loadSamples: true
+    # ANALYZE: "off", "afterBootstrap" (hook), "scheduled" (maintenance CronJob) or "both"
+    analyze: "afterBootstrap"
 
     # Queryables configuration
     # List of queryables configurations to load using pypgstac load-queryables
@@ -237,7 +259,7 @@ pgstacBootstrap:
       use_queue: "false"                 # Enable/disable query queue mechanism
 
       # Collection extent management
-      update_collection_extent: "true"   # Auto-update collection extents when items are added/modified
+      update_collection_extent: "true"   # "true" (on item writes), "false" or "scheduled" (maintenance CronJob)
 
       # Context configuration for search results
       context: "off"                     # Context mode: "on", "off", or "auto" (pgSTAC default: off)
@@ -248,10 +270,32 @@ pgstacBootstrap:
     # Queue processing configuration (only used when use_queue is "true")
     queueProcessor:
       schedule: "0 * * * *"               # Run every hour
+      activeDeadlineSeconds: null
+      resources:
+        limits:
+          cpu: "256m"
+          memory: "512Mi"
+        requests:
+          cpu: "128m"
+          memory: "256Mi"
 
-    # Extent updater configuration (only used when update_collection_extent is "false")
-    extentUpdater:
+    # Maintenance CronJob (used when update_collection_extent is "scheduled" or analyze is "scheduled"/"both")
+    maintenance:
       schedule: "0 2 * * *"               # Run daily at 2 AM
+      activeDeadlineSeconds: null
+      resources:
+        limits:
+          cpu: "512m"
+          memory: "1024Mi"
+        requests:
+          cpu: "256m"
+          memory: "512Mi"
+
+    # Extra env vars for pgstac Jobs/CronJobs (not the API services)
+    extraEnv: []
+    # extraEnv:
+    #   - name: PGOPTIONS
+    #     value: "-c statement_timeout=0"
 
     # Wait configuration for init containers waiting for pgstac jobs
     # These parameters control how long services wait for pgstac migration jobs to complete
@@ -270,6 +314,19 @@ pgstacBootstrap:
     envVars:
       # toggle to "false" if you don't want fixtures default loaded
       LOAD_FIXTURES: "true"
+    # Container securityContext applied to all pgstacBootstrap Jobs/CronJobs
+    # (pgstac-migrate, pgstac-load-samples, pgstac-load-queryables, pgstac-analyze,
+    # pgstac-superuser-init-db, pgstac-maintenance, pgstac-queue-processor)
+    securityContext: {}
+    # Pod-level securityContext applied to the same set of Jobs/CronJobs
+    podSecurityContext: {}
+    # Container securityContext for the `wait-for-pgstac-jobs` init container
+    # injected into the stac/raster/vector/multidim Deployments. Defaults
+    # preserve this chart's historical (previously hardcoded) behavior.
+    initContainerSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      runAsGroup: 65534
 
 ######################
 # API SERVICES
@@ -285,6 +342,15 @@ raster:
   ingress:
     enabled: true  # Control ingress specifically for raster service
     path: "/raster"  # Configurable path prefix for the raster service
+  # Native titiler-pgstac Prometheus metrics (https://github.com/developmentseed/eoAPI/issues/193).
+  # Exposes GET /metrics; requires monitoring.prometheus.enabled=true to be scraped.
+  metrics:
+    enabled: false
+    # For prometheus-operator clusters, as an alternative to prometheus.io/scrape above
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+      additionalLabels: {}  # match your Prometheus CR's serviceMonitorSelector
   autoscaling:
     # NOTE: to have autoscaling working you'll need to enable monitoring
     # see ../../../docs/autoscaling.md for more information
@@ -308,7 +374,8 @@ raster:
       requestRate: 100000m
   image:
     name: ghcr.io/stac-utils/titiler-pgstac
-    tag: 3.0.0
+    tag: 3.2.0
+    pullPolicy: IfNotPresent
   command:
     - "uvicorn"
     - "titiler.pgstac.main:app"
@@ -320,6 +387,8 @@ raster:
     extraEnvFrom: []
     extraVolumeMounts: []
     extraVolumes: []
+    securityContext: {}
+    podSecurityContext: {}
     envVars:
       ##############
       # titiler
@@ -333,6 +402,7 @@ raster:
       PYTHONWARNINGS: "ignore"
       VSI_CACHE: "TRUE"
       VSI_CACHE_SIZE: "5000000"  # 5 MB (per file-handle)
+      RIO_TILER_STAC_ALTERNATE_KEY: ""
       ##############
       # uvicorn
       ##############
@@ -374,6 +444,7 @@ multidim:
   image:
     name: ghcr.io/developmentseed/titiler-md-demo
     tag: 6406b10406287ba9d3f345706d0c2be5f0265e02
+    pullPolicy: IfNotPresent
   command:
     - "uvicorn"
     - "titiler_md_demo.main:app"
@@ -385,6 +456,8 @@ multidim:
     extraEnvFrom: []
     extraVolumeMounts: []
     extraVolumes: []
+    securityContext: {}
+    podSecurityContext: {}
     envVars:
       ##############
       # titiler
@@ -415,6 +488,15 @@ stac:
   ingress:
     enabled: true  # Control ingress specifically for stac service
     path: "/stac"  # Configurable path prefix for the stac service
+  # Native stac-fastapi-pgstac Prometheus metrics (https://github.com/developmentseed/eoAPI/issues/193).
+  # Exposes GET /_mgmt/metrics; requires monitoring.prometheus.enabled=true to be scraped.
+  metrics:
+    enabled: false
+    # For prometheus-operator clusters, as an alternative to prometheus.io/scrape above
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+      additionalLabels: {}  # match your Prometheus CR's serviceMonitorSelector
   autoscaling:
     # NOTE: to have autoscaling working you'll need to enable monitoring
     # see ../../../docs/autoscaling.md for more information
@@ -438,10 +520,12 @@ stac:
       requestRate: 100000m
   image:
     name: ghcr.io/stac-utils/stac-fastapi-pgstac
-    tag: 6.2.2
+    tag: 7.2.1
+    pullPolicy: IfNotPresent
   command:
     - "uvicorn"
-    - "stac_fastapi.pgstac.app:app"
+    - "stac_fastapi.pgstac.app:create_app"
+    - "--factory"
     - "--host=$(HOST)"
     - "--port=$(PORT)"
   settings:
@@ -450,6 +534,8 @@ stac:
     extraEnvFrom: []
     extraVolumeMounts: []
     extraVolumes: []
+    securityContext: {}
+    podSecurityContext: {}
     envVars:
       ##############
       # uvicorn
@@ -467,11 +553,17 @@ stac:
 stac-auth-proxy:
   enabled: false
   image:
-    tag: "v1.1.0"
+    repository: ghcr.io/developmentseed/stac-auth-proxy
+    tag: "v1.3.1"
   ingress:
     enabled: false  # Handled by main eoapi ingress
   service:
     port: 8080
+  # For prometheus-operator clusters (metrics are on by default here, unlike raster/vector/stac)
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    additionalLabels: {}
   # Production-oriented defaults; override per cluster. Low CPU limits cause throttling under load.
   resources:
     requests:
@@ -498,6 +590,8 @@ stac-auth-proxy:
     # http://localhost:8081/... for an oauth2-proxy sidecar; set to your OIDC service when testing)
     # UPSTREAM_URL must be set to "http://<release-name>-stac:8080" (required)
     ROOT_PATH: "/stac"
+    # Skip ROOT_PATH rewrite for these prefixes in STAC response links
+    ROOT_PATH_SKIP_PREFIXES: "/raster,/vector,/browser,/multidim"
     OVERRIDE_HOST: "false"
     #
     # Authentication filters settings:
@@ -537,6 +631,15 @@ vector:
   ingress:
     enabled: true  # Control ingress specifically for vector service
     path: "/vector"  # Configurable path prefix for the vector service
+  # Native tipg Prometheus metrics (https://github.com/developmentseed/eoAPI/issues/193).
+  # Exposes GET /metrics; requires monitoring.prometheus.enabled=true to be scraped.
+  metrics:
+    enabled: false
+    # For prometheus-operator clusters, as an alternative to prometheus.io/scrape above
+    serviceMonitor:
+      enabled: false
+      interval: 30s
+      additionalLabels: {}  # match your Prometheus CR's serviceMonitorSelector
   autoscaling:
     # NOTE: to have autoscaling working you'll need to enable monitoring
     # see ../../../docs/autoscaling.md for more information
@@ -560,7 +663,8 @@ vector:
       requestRate: 100000m
   image:
     name: ghcr.io/developmentseed/tipg
-    tag: 1.4.0
+    tag: 1.6.1
+    pullPolicy: IfNotPresent
   command:
     - "uvicorn"
     - "tipg.main:app"
@@ -572,6 +676,8 @@ vector:
     extraEnvFrom: []
     extraVolumeMounts: []
     extraVolumes: []
+    securityContext: {}
+    podSecurityContext: {}
     envVars:
       ##############
       # tipg
@@ -596,9 +702,9 @@ vector:
 browser:
   enabled: true
   image:
-    # we use a custom image with pathPrefix built into it
-    name: ghcr.io/developmentseed/eoapi-k8s/stac-browser
-    tag: 4.0.1
+    name: ghcr.io/radiantearth/stac-browser
+    tag: "5.2.0"
+    pullPolicy: IfNotPresent
   service:
     port: 8080
   ingress:
@@ -625,15 +731,30 @@ browser:
   #     url: "https://example.com/terms"
   #   - label: "Privacy"
   #     url: "https://example.com/privacy"
+  # Extra environment variables for the browser container. Use this to set any stac-browser
+  # SB_<option> config not covered by the values above (https://github.com/radiantearth/stac-browser).
+  extraEnv: []
+  # Example:
+  # extraEnv:
+  #   - name: SB_itemsPerPage
+  #     value: "60"
   settings:
     labels: {}
     resources: {}
+    securityContext: {}
+    podSecurityContext: {}
 
 docServer:
   enabled: true
   redirectTo: ""  # When set, root path redirects here instead of showing the landing page (e.g. "/browser/")
+  image:
+    name: nginxinc/nginx-unprivileged
+    tag: "1.31.7-alpine"
+    pullPolicy: IfNotPresent
   settings:
     resources: {}
+    securityContext: {}
+    podSecurityContext: {}
 
 ######################
 # NOTIFICATIONS
@@ -668,7 +789,7 @@ eoapi-notifier:
     - type: cloudevents
       config:
         source: /eoapi/pgstac
-        event_type: org.eoapi.stac.item
+        # Event type is derived from operation (org.ogc.api.collection.item.create/replace/delete)
         # For KNative SinkBinding:
         destination:
           ref:
@@ -687,6 +808,13 @@ eoapi-notifier:
 testing:
   mockOidcServer:
     enabled: false  # Only enabled in experimental profile
+    image:
+      name: ghcr.io/alukach/mock-oidc-server
+      # No version tags published; pin by digest (refresh when upgrading the image).
+      digest: sha256:5972adac0b6e3a094ea043be0f1851c65e3fd54e17a546f0b71dedd17c7a2d6a
+      pullPolicy: IfNotPresent
+    securityContext: {}
+    podSecurityContext: {}
 
 ######################
 # KNATIVE
@@ -703,8 +831,14 @@ knative:
   # CloudEvents sink configuration (deployed when eoapi-notifier uses CloudEvents output)
   cloudEventsSink:
     enabled: false
-    image: registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.6.9
+    # Sample Knative sink; pin by digest (refresh when upgrading the image).
+    image:
+      name: gcr.io/knative-samples/helloworld-go
+      digest: sha256:ec6672b354dc9db37b221ee76fea62147d0450028208aa964011f685b1e0a3e3
+      pullPolicy: IfNotPresent
     resources: {}
+    securityContext: {}
+    podSecurityContext: {}
     service:
       annotations:
         helm.sh/hook: "post-install,post-upgrade"
@@ -717,10 +851,20 @@ knative:
         helm.sh/hook-delete-policy: "before-hook-creation"
   jobs:
     init:
+      image:
+        name: alpine/kubectl
+        tag: "1.34.2"
+        pullPolicy: IfNotPresent
       annotations:
         helm.sh/hook: "post-install,post-upgrade"
         helm.sh/hook-weight: "0"
         helm.sh/hook-delete-policy: "before-hook-creation,hook-succeeded"
+      # Preserves this chart's historical (previously hardcoded) behavior.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+      podSecurityContext: {}
 
 # Knative operator sub-chart configuration
 knative-operator:
@@ -738,66 +882,13 @@ monitoring:
     apiService:
       create: true
 
-  # Prometheus - core metrics collection for autoscaling
+  # Prometheus - core metrics collection for autoscaling (subchart config: prometheus)
   prometheus:
     enabled: false
-    alertmanager:
-      enabled: false
-    prometheus-pushgateway:
-      enabled: false
-    kube-state-metrics:
-      enabled: true
-    prometheus-node-exporter:
-      enabled: true
-      resources: {}
-    server:
-      service:
-        type: ClusterIP  # Internal service, no external exposure by default
 
-  # Prometheus adapter - enables custom HPA metrics
+  # Prometheus adapter - enables custom HPA metrics (subchart config: prometheus-adapter)
   prometheusAdapter:
     enabled: false
-    prometheus:
-      # URL to Prometheus server - will be auto-configured for same-release Prometheus
-      # If using external Prometheus, set this to your Prometheus URL
-      # Example: http://my-prometheus-server.monitoring.svc.cluster.local
-      url: http://eoapi-prometheus-server.eoapi.svc.cluster.local
-      port: 80
-      path: ""
-    rules:
-      default: false
-      # Custom metrics for eoapi service autoscaling
-      # Each service gets its own request rate metric for HPA scaling
-      custom:
-        # Vector service request rate metric
-        - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
-          seriesFilters: []
-          resources:
-            template: <<.Resource>>
-          name:
-            matches: ""
-            as: "nginx_ingress_controller_requests_rate_vector_eoapi"
-          metricsQuery: round(sum(rate(<<.Series>>{service="vector",path=~"/vector.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)
-
-        # Raster service request rate metric
-        - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
-          seriesFilters: []
-          resources:
-            template: <<.Resource>>
-          name:
-            matches: ""
-            as: "nginx_ingress_controller_requests_rate_raster_eoapi"
-          metricsQuery: round(sum(rate(<<.Series>>{service="raster",path=~"/raster.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)
-
-        # STAC service request rate metric
-        - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
-          seriesFilters: []
-          resources:
-            template: <<.Resource>>
-          name:
-            matches: ""
-            as: "nginx_ingress_controller_requests_rate_stac_eoapi"
-          metricsQuery: round(sum(rate(<<.Series>>{service="stac",path=~"/stac.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)
 
 ######################
 # OBSERVABILITY
@@ -805,29 +896,129 @@ monitoring:
 # Grafana dashboards and visualization (requires monitoring.prometheus.enabled=true)
 observability:
   grafana:
+    # Only the Chart.yaml dependency condition; subchart values go in `grafana:` below.
     enabled: false
-    persistence:
-      enabled: false
-    service:
-      type: LoadBalancer
-      annotations:
-        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-        service.beta.kubernetes.io/aws-load-balancer-internal: "false"
-    resources: {}
-    datasources:
-      datasources.yaml:
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            url: "http://{{ .Release.Name }}-prometheus-server"
-            access: proxy
-            isDefault: true
-    dashboardsConfigMaps:
-      default: "{{ .Release.Name }}-dashboards"
+
+# Grafana sub-chart configuration, passed directly to the grafana subchart
+grafana:
+  persistence:
+    enabled: false
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-internal: "false"
+  resources: {}
+  sidecar:
+    dashboards:
+      enabled: true
+      label: eoapi_dashboard
+      labelValue: "1"
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: "http://{{ .Release.Name }}-prometheus-server"
+          access: proxy
+          isDefault: true
 
 # Metrics Server sub-chart configuration
 # These values are passed directly to the metrics-server sub-chart
 metrics-server:
   apiService:
     create: true
+
+# Prometheus sub-chart configuration
+# These values are passed directly to the prometheus sub-chart
+prometheus:
+  alertmanager:
+    enabled: false
+  prometheus-pushgateway:
+    enabled: false
+  kube-state-metrics:
+    enabled: true
+  prometheus-node-exporter:
+    enabled: true
+    resources: {}
+  server:
+    service:
+      type: ClusterIP  # Internal service, no external exposure by default
+  # Scrapes the stac-auth-proxy pod directly by pod label, since the vendored
+  # stac-auth-proxy subchart doesn't expose a prometheus.io/scrape annotation hook.
+  # No-op (zero matched targets) when stac-auth-proxy.enabled=false.
+  # Metrics endpoint is on by default since stac-auth-proxy v1.2.0
+  # (https://github.com/developmentseed/eoAPI/issues/193); the path is prefixed
+  # with stac-auth-proxy.env.ROOT_PATH because RemoveRootPathMiddleware strips it
+  # from incoming requests before routing. Port 8000 is the subchart's hardcoded
+  # containerPort (its own values.service.port only affects the k8s Service, not
+  # the pod) - keep this in sync if the vendored chart ever changes it.
+  extraScrapeConfigs: |
+    - job_name: stac-auth-proxy
+      metrics_path: /stac/_mgmt/metrics
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+          action: keep
+          regex: stac-auth-proxy
+        - source_labels: [__meta_kubernetes_pod_container_port_number]
+          action: keep
+          regex: "8000"
+
+# Prometheus Adapter sub-chart configuration
+# These values are passed directly to the prometheus-adapter sub-chart.
+# rules.custom[].name.as must match eoapi.hpaRequestRateMetricName per apiServices entry.
+prometheus-adapter:
+  prometheus:
+    # URL to Prometheus server - will be auto-configured for same-release Prometheus
+    # If using external Prometheus, set this to your Prometheus URL
+    # Example: http://my-prometheus-server.monitoring.svc.cluster.local
+    url: http://eoapi-prometheus-server.eoapi.svc.cluster.local
+    port: 80
+    path: ""
+  rules:
+    default: false
+    # Custom metrics for eoapi service autoscaling
+    # Each service gets its own request rate metric for HPA scaling
+    custom:
+      # Vector service request rate metric
+      - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
+        seriesFilters: []
+        resources:
+          template: <<.Resource>>
+        name:
+          matches: ""
+          as: "nginx_ingress_controller_requests_rate_vector_eoapi"
+        metricsQuery: round(sum(rate(<<.Series>>{service="vector",path=~"/vector.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)
+
+      # Raster service request rate metric
+      - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
+        seriesFilters: []
+        resources:
+          template: <<.Resource>>
+        name:
+          matches: ""
+          as: "nginx_ingress_controller_requests_rate_raster_eoapi"
+        metricsQuery: round(sum(rate(<<.Series>>{service="raster",path=~"/raster.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)
+
+      # STAC service request rate metric
+      - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
+        seriesFilters: []
+        resources:
+          template: <<.Resource>>
+        name:
+          matches: ""
+          as: "nginx_ingress_controller_requests_rate_stac_eoapi"
+        metricsQuery: round(sum(rate(<<.Series>>{service="stac",path=~"/stac.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)
+
+      # Multidim service request rate metric
+      - seriesQuery: '{__name__=~"^nginx_ingress_controller_requests$",namespace!=""}'
+        seriesFilters: []
+        resources:
+          template: <<.Resource>>
+        name:
+          matches: ""
+          as: "nginx_ingress_controller_requests_rate_multidim_eoapi"
+        metricsQuery: round(sum(rate(<<.Series>>{service="multidim",path=~"/multidim.*",<<.LabelMatchers>>}[5m])) by (<<.GroupBy>>), 0.001)

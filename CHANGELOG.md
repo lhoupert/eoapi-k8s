@@ -1,5 +1,333 @@
 # Changelog
 
+## [0.17.6](https://github.com/developmentseed/eoapi-k8s/compare/v0.17.5...v0.17.6) (2026-11-06)
+
+
+### Fixed
+
+* **helm:** per-collection queryables in pgstac-load-queryables ([#677](https://github.com/developmentseed/eoapi-k8s/issues/677)) ([5efa287](https://github.com/developmentseed/eoapi-k8s/commit/5efa2874ef4b0f1faa80354f341c53e2d2b84be2))
+
+
+### Maintenance
+
+* **deps:** updated helm release prometheus-adapter to 5.4.0. ([#674](https://github.com/developmentseed/eoapi-k8s/issues/674)) ([3e00141](https://github.com/developmentseed/eoapi-k8s/commit/3e001416a94c6eac63fe66b30b75f4f2867bd485))
+
+## [0.17.5](https://github.com/developmentseed/eoapi-k8s/compare/v0.17.4...v0.17.5) (2026-11-03)
+
+
+### Maintenance
+
+* **deps:** bump actions/setup-python from 7.0.0 to 7.1.0 in the minor-and-patch group ([#660](https://github.com/developmentseed/eoapi-k8s/issues/660)) ([9d555b0](https://github.com/developmentseed/eoapi-k8s/commit/9d555b0ed2b56320d986b93375cc761f753c261f))
+* **deps:** bump the pip group across 1 directory with 3 updates ([#665](https://github.com/developmentseed/eoapi-k8s/issues/665)) ([9f656b7](https://github.com/developmentseed/eoapi-k8s/commit/9f656b7b1e3a1bc93d7d6aba39afdf3f653fa87b))
+* **deps:** let Renovate track the chart's versioned images ([#666](https://github.com/developmentseed/eoapi-k8s/issues/666)) ([f0163f3](https://github.com/developmentseed/eoapi-k8s/commit/f0163f34b2590901f8ca1b77f5b01612a00e4418))
+* **deps:** updated actions/setup-python action to v7.1.0. ([#656](https://github.com/developmentseed/eoapi-k8s/issues/656)) ([be43909](https://github.com/developmentseed/eoapi-k8s/commit/be43909f4ded174bb0fd77bbf406a844afbff823))
+* **deps:** updated alpine/kubectl docker tag to v1.34.2 ([#671](https://github.com/developmentseed/eoapi-k8s/issues/671)) ([b6efb24](https://github.com/developmentseed/eoapi-k8s/commit/b6efb24c40c79e6e7db41e4d42298d36eb811cb8))
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v7.2.0 ([#661](https://github.com/developmentseed/eoapi-k8s/issues/661)) ([d7d651c](https://github.com/developmentseed/eoapi-k8s/commit/d7d651c238337c3770d72342e04007acb83e970a))
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v7.2.1 ([#672](https://github.com/developmentseed/eoapi-k8s/issues/672)) ([c2ab003](https://github.com/developmentseed/eoapi-k8s/commit/c2ab0037f1374c6226391d8199b82554ffa04d14))
+* **deps:** updated helm release knative-operator to v1.24.0. ([#669](https://github.com/developmentseed/eoapi-k8s/issues/669)) ([75d677d](https://github.com/developmentseed/eoapi-k8s/commit/75d677d16ea9a36c30e7681b6c824caf18c33271))
+* **deps:** updated helm release prometheus to 29.39.0. ([#659](https://github.com/developmentseed/eoapi-k8s/issues/659)) ([953e547](https://github.com/developmentseed/eoapi-k8s/commit/953e54776703d379b547b7bea43964c6fd24fa78))
+* **deps:** updated helm release prometheus to 29.40.3. ([#668](https://github.com/developmentseed/eoapi-k8s/issues/668)) ([9b3117c](https://github.com/developmentseed/eoapi-k8s/commit/9b3117c4d4ff5602a8c71f409c5da45019afdb37))
+* **deps:** updated helm/chart-releaser-action action to v1.8.0. ([#662](https://github.com/developmentseed/eoapi-k8s/issues/662)) ([6982743](https://github.com/developmentseed/eoapi-k8s/commit/6982743622b8fd4f3e6e315a8a9d4a5e58b453bd))
+* **deps:** updated helm/chart-releaser-action action to v1.9.0. ([#670](https://github.com/developmentseed/eoapi-k8s/issues/670)) ([8b7c4c4](https://github.com/developmentseed/eoapi-k8s/commit/8b7c4c457a36579078d8f3b2cbca6c5a36a91bfb))
+* **deps:** updated nginxinc/nginx-unprivileged docker tag to v1.31.7 ([#673](https://github.com/developmentseed/eoapi-k8s/issues/673)) ([3c0fe17](https://github.com/developmentseed/eoapi-k8s/commit/3c0fe1706e2bf64cb6485cf996211e0cf00337de))
+* **deps:** updated node to 26.13.0. ([#663](https://github.com/developmentseed/eoapi-k8s/issues/663)) ([03be1df](https://github.com/developmentseed/eoapi-k8s/commit/03be1df143a9e0e52f36f8cfab0e2c58a3c806ee))
+
+## [0.17.4](https://github.com/developmentseed/eoapi-k8s/compare/v0.17.3...v0.17.4) (2026-10-27)
+
+
+### Maintenance
+
+* **deps:** updated actions/create-github-app-token action to v3.3.0. ([#652](https://github.com/developmentseed/eoapi-k8s/issues/652)) ([df13e66](https://github.com/developmentseed/eoapi-k8s/commit/df13e665045fc3cc5ae81a7108e91f2f48e06828))
+* **deps:** updated ghcr.io/developmentseed/stac-auth-proxy docker tag to v1.3.1 ([#657](https://github.com/developmentseed/eoapi-k8s/issues/657)) ([64e5145](https://github.com/developmentseed/eoapi-k8s/commit/64e5145ca2c59a2cbaa8b35c9fda31e3a9203047))
+* **deps:** updated helm release prometheus to 29.36.2. ([#653](https://github.com/developmentseed/eoapi-k8s/issues/653)) ([e82cbe2](https://github.com/developmentseed/eoapi-k8s/commit/e82cbe28fb8ffad0796b1655ae4a00808c2198fd))
+* **deps:** updated helm release prometheus to 29.37.0. ([#654](https://github.com/developmentseed/eoapi-k8s/issues/654)) ([1116ccf](https://github.com/developmentseed/eoapi-k8s/commit/1116ccf6068fd049e93a187c84bb40122c4352d2))
+* **deps:** updated python to 3.15.0. ([#650](https://github.com/developmentseed/eoapi-k8s/issues/650)) ([97f8cd5](https://github.com/developmentseed/eoapi-k8s/commit/97f8cd5c4b06aab0f8bcd9f528d19c662a11964c))
+* **deps:** updated stac-auth-proxy docker tag to v1.3.1 ([#658](https://github.com/developmentseed/eoapi-k8s/issues/658)) ([93ad4e8](https://github.com/developmentseed/eoapi-k8s/commit/93ad4e869638c174e754bcb4bf8d341da7e3b10a))
+
+## [0.17.3](https://github.com/developmentseed/eoapi-k8s/compare/v0.17.2...v0.17.3) (2026-10-09)
+
+
+### Maintenance
+
+* add repository to stac-auth-proxy in values.yaml ([#649](https://github.com/developmentseed/eoapi-k8s/issues/649)) ([d46a31a](https://github.com/developmentseed/eoapi-k8s/commit/d46a31af58d83466154a1a5b9cd2e0b7658152b1))
+* **deps:** updated helm release prometheus to 29.36.1. ([#647](https://github.com/developmentseed/eoapi-k8s/issues/647)) ([4cd2f1d](https://github.com/developmentseed/eoapi-k8s/commit/4cd2f1d186963ea980e18d182ec3a3bda635b5bc))
+
+## [0.17.2](https://github.com/developmentseed/eoapi-k8s/compare/v0.17.1...v0.17.2) (2026-10-08)
+
+
+### Fixed
+
+* **pgstac:** set search_path in maintenance and queue-processor psql sessions ([#645](https://github.com/developmentseed/eoapi-k8s/issues/645)) ([6a9c763](https://github.com/developmentseed/eoapi-k8s/commit/6a9c7634e92fe9f77351453638edcf1f84c69eb7))
+
+## [0.17.1](https://github.com/developmentseed/eoapi-k8s/compare/v0.17.0...v0.17.1) (2026-10-08)
+
+
+### Fixed
+
+* **pgstac:** maintenance job failing for roles without pgstac in search_path ([#643](https://github.com/developmentseed/eoapi-k8s/issues/643)) ([a43029a](https://github.com/developmentseed/eoapi-k8s/commit/a43029ae025ebb1cf0ab36563cc7600750537c85))
+
+## [0.17.0](https://github.com/developmentseed/eoapi-k8s/compare/v0.16.4...v0.17.0) (2026-10-08)
+
+
+### Added
+
+* **pgstac:** add scheduled maintenance service ([#637](https://github.com/developmentseed/eoapi-k8s/issues/637)) ([aa53926](https://github.com/developmentseed/eoapi-k8s/commit/aa53926e083e00126d86a5a144db7a3369eb4ef8))
+
+
+### Maintenance
+
+* **deps:** updated actions/setup-node digest to 949feb2 ([#642](https://github.com/developmentseed/eoapi-k8s/issues/642)) ([6a7e9f8](https://github.com/developmentseed/eoapi-k8s/commit/6a7e9f8c6f5529dcf9c6ee1d5f7d863d28cc41ce))
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v7.1.0 ([#638](https://github.com/developmentseed/eoapi-k8s/issues/638)) ([4635e4c](https://github.com/developmentseed/eoapi-k8s/commit/4635e4c636f5cdfbe7aa2fcc75e00cca448e7fc0))
+* **deps:** updated helm release prometheus to 29.36.0. ([#641](https://github.com/developmentseed/eoapi-k8s/issues/641)) ([2877eb9](https://github.com/developmentseed/eoapi-k8s/commit/2877eb98923e232fcb6a7c839b15c41b3f6f64bf))
+* **deps:** updated stac-auth-proxy docker tag to v1.3.0 ([#639](https://github.com/developmentseed/eoapi-k8s/issues/639)) ([fdb78b4](https://github.com/developmentseed/eoapi-k8s/commit/fdb78b431c5427cbec556acffac8422b359ea407))
+
+## [0.16.4](https://github.com/developmentseed/eoapi-k8s/compare/v0.16.3...v0.16.4) (2026-10-05)
+
+
+### Fixed
+
+* **docs:** included observability docs in rendering. ([eba8dba](https://github.com/developmentseed/eoapi-k8s/commit/eba8dba4abf09a985c17103fabde67dc40887118))
+* **values:** pin pgstac-pypgstac to v0.9.12 by digest ([#635](https://github.com/developmentseed/eoapi-k8s/issues/635)) ([9195399](https://github.com/developmentseed/eoapi-k8s/commit/9195399d7c5de641b1b12a50dc4dd9f8cd6a3308))
+
+
+### Maintenance
+
+* **deps:** updated helm release prometheus to 29.30.2. ([#629](https://github.com/developmentseed/eoapi-k8s/issues/629)) ([1eda716](https://github.com/developmentseed/eoapi-k8s/commit/1eda71672e06533be63764b6904b8579fbfce722))
+* **deps:** updated helm release prometheus to 29.33.0. ([#631](https://github.com/developmentseed/eoapi-k8s/issues/631)) ([e54b841](https://github.com/developmentseed/eoapi-k8s/commit/e54b841ae00016de3f19caa41a1296ce7b99716c))
+* **deps:** updated helm release prometheus to 29.33.1. ([#633](https://github.com/developmentseed/eoapi-k8s/issues/633)) ([76e83fe](https://github.com/developmentseed/eoapi-k8s/commit/76e83feb396059a44d79ce1eb2c763cab3786f88))
+* **deps:** updated helm release prometheus to 29.35.0. ([#634](https://github.com/developmentseed/eoapi-k8s/issues/634)) ([cf23fc6](https://github.com/developmentseed/eoapi-k8s/commit/cf23fc6bc356198143d221a9b881bfb5622fd1c8))
+
+## [0.16.3](https://github.com/developmentseed/eoapi-k8s/compare/v0.16.2...v0.16.3) (2026-09-17)
+
+
+### Fixed
+
+* add analyze pgstacbootstrap job. ([#622](https://github.com/developmentseed/eoapi-k8s/issues/622)) ([64efcb4](https://github.com/developmentseed/eoapi-k8s/commit/64efcb414abbcc292a47081e95c7f52b9cc59b47))
+* added servicemonitor support. ([#628](https://github.com/developmentseed/eoapi-k8s/issues/628)) ([2b24c3a](https://github.com/developmentseed/eoapi-k8s/commit/2b24c3afc916e44531eb28d57120b2984f871b51))
+* expose RIO_TILER_STAC_ALTERNATE_KEY for raster service ([#623](https://github.com/developmentseed/eoapi-k8s/issues/623)) ([e326da5](https://github.com/developmentseed/eoapi-k8s/commit/e326da5376d8fc5db8e97ffcc865fb873ed8587a))
+* wire in stac-fastapi-pgstac metrics support. ([#627](https://github.com/developmentseed/eoapi-k8s/issues/627)) ([dff04e0](https://github.com/developmentseed/eoapi-k8s/commit/dff04e0da949365c83a7b0467fd7e85992f448eb))
+
+
+### Maintenance
+
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v6.4.1 ([#624](https://github.com/developmentseed/eoapi-k8s/issues/624)) ([d138d2b](https://github.com/developmentseed/eoapi-k8s/commit/d138d2b3d9da6128e6f98b4527b911af73e4b19c))
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v7 ([#626](https://github.com/developmentseed/eoapi-k8s/issues/626)) ([26a2c7e](https://github.com/developmentseed/eoapi-k8s/commit/26a2c7e7a0428328c253faafbb861a8eb6fabf1f))
+* **deps:** updated ghcr.io/stac-utils/titiler-pgstac docker tag to v3.2.0 ([#625](https://github.com/developmentseed/eoapi-k8s/issues/625)) ([5db359e](https://github.com/developmentseed/eoapi-k8s/commit/5db359e724c0f8015ea8beec7262b7f78a94729b))
+* **deps:** updated helm release prometheus to 29.28.0. ([#614](https://github.com/developmentseed/eoapi-k8s/issues/614)) ([ac652d4](https://github.com/developmentseed/eoapi-k8s/commit/ac652d40efd9063de18b26e2efc42bd922747a08))
+* **deps:** updated helm release prometheus to 29.29.0. ([#617](https://github.com/developmentseed/eoapi-k8s/issues/617)) ([78c5f3c](https://github.com/developmentseed/eoapi-k8s/commit/78c5f3c4d3067377320b00b5e7828adf50348b01))
+* **deps:** updated helm release prometheus to 29.30.0. ([#619](https://github.com/developmentseed/eoapi-k8s/issues/619)) ([07b1007](https://github.com/developmentseed/eoapi-k8s/commit/07b1007c991da33ba67f7a5b6ba6171567c98616))
+
+## [0.16.2](https://github.com/developmentseed/eoapi-k8s/compare/v0.16.1...v0.16.2) (2026-09-10)
+
+
+### Fixed
+
+* add hook-delete-policy annotation to pgstacBootstrap jobs in argocd preset ([#612](https://github.com/developmentseed/eoapi-k8s/issues/612)) ([4be280d](https://github.com/developmentseed/eoapi-k8s/commit/4be280db915b6f2e56377b6cbd8dc2ead36d8177))
+
+## [0.16.1](https://github.com/developmentseed/eoapi-k8s/compare/v0.16.0...v0.16.1) (2026-09-10)
+
+
+### Fixed
+
+* chart version mismatch with 6.4.0 ([57c2630](https://github.com/developmentseed/eoapi-k8s/commit/57c26300dfe00fdd4ab1b8e608b71434185c2064))
+* export script fetch in batches. ([#611](https://github.com/developmentseed/eoapi-k8s/issues/611)) ([048f6da](https://github.com/developmentseed/eoapi-k8s/commit/048f6daf49d823448c018aaa9681cac742fd8205))
+* security context. ([#609](https://github.com/developmentseed/eoapi-k8s/issues/609)) ([041e3a4](https://github.com/developmentseed/eoapi-k8s/commit/041e3a4d274ddc2f03956145fd2a03197e61376b))
+* use uvicorn factory pattern for stac-fastapi-pgstac 6.4.0 ([380cb54](https://github.com/developmentseed/eoapi-k8s/commit/380cb54aca4b56e794781c1250e23de026847a83))
+
+
+### Maintenance
+
+* **deps:** updated ghcr.io/developmentseed/tipg docker tag to v1.6.1 ([#604](https://github.com/developmentseed/eoapi-k8s/issues/604)) ([72cf6ad](https://github.com/developmentseed/eoapi-k8s/commit/72cf6ad949103538b7349029c6f3405206849477))
+* **deps:** updated ghcr.io/radiantearth/stac-browser docker tag to v5.1.0 ([#607](https://github.com/developmentseed/eoapi-k8s/issues/607)) ([b384843](https://github.com/developmentseed/eoapi-k8s/commit/b3848436e1a67e83febe66fb1f2baffa27da231a))
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v6.4.0 ([#610](https://github.com/developmentseed/eoapi-k8s/issues/610)) ([52c4e27](https://github.com/developmentseed/eoapi-k8s/commit/52c4e27e31512a141923ded7e686735136eda138))
+* **deps:** updated helm release prometheus to 29.27.2. ([#606](https://github.com/developmentseed/eoapi-k8s/issues/606)) ([7c8d098](https://github.com/developmentseed/eoapi-k8s/commit/7c8d098bf29646dc3b30844e9e3004f76c7d0c51))
+
+## [0.16.0](https://github.com/developmentseed/eoapi-k8s/compare/v0.15.2...v0.16.0) (2026-09-03)
+
+
+### Added
+
+* add pgstac export script. ([#600](https://github.com/developmentseed/eoapi-k8s/issues/600)) ([8990e6b](https://github.com/developmentseed/eoapi-k8s/commit/8990e6bbd835db61ac31060a70cb72bbbd6f8f72))
+
+
+### Changed
+
+* split browser and auth-proxy ingresses. ([#586](https://github.com/developmentseed/eoapi-k8s/issues/586)) ([b5249fd](https://github.com/developmentseed/eoapi-k8s/commit/b5249fd20aad797f1b9660266d00fd576e2e55c1))
+
+
+### Maintenance
+
+* **deps:** updated ghcr.io/developmentseed/tipg docker tag to v1.6.0 ([#603](https://github.com/developmentseed/eoapi-k8s/issues/603)) ([356c6ce](https://github.com/developmentseed/eoapi-k8s/commit/356c6ceef668a296c85fb9817566882246357aa9))
+* **deps:** updated helm release knative-operator to v1.23.1. ([#601](https://github.com/developmentseed/eoapi-k8s/issues/601)) ([a9aa125](https://github.com/developmentseed/eoapi-k8s/commit/a9aa125a5e5fea99c9a7d46ec1822aa24a56b251))
+
+## [0.15.2](https://github.com/developmentseed/eoapi-k8s/compare/v0.15.1...v0.15.2) (2026-08-25)
+
+
+### Maintenance
+
+* **deps:** upgraded stac-browser to version 5.0.0. ([#598](https://github.com/developmentseed/eoapi-k8s/issues/598)) ([48dfc42](https://github.com/developmentseed/eoapi-k8s/commit/48dfc422b29ac85321b519bacf296b478f5063e8))
+
+## [0.15.1](https://github.com/developmentseed/eoapi-k8s/compare/v0.15.0...v0.15.1) (2026-08-24)
+
+
+### Fixed
+
+* keep chart rewrite and middleware annotations above user overrides ([#581](https://github.com/developmentseed/eoapi-k8s/issues/581)) ([eff2fae](https://github.com/developmentseed/eoapi-k8s/commit/eff2fae15999eec313401e31cb9e86b83af693df))
+
+
+### Changed
+
+* extract unified ingress helpers. ([#546](https://github.com/developmentseed/eoapi-k8s/issues/546)) ([47f6762](https://github.com/developmentseed/eoapi-k8s/commit/47f6762ea0216e8533d38a911b17ff61d5fe2d31))
+
+
+### Maintenance
+
+* **deps:** bump docker/login-action from 4.5.0 to 4.5.1 in the minor-and-patch group ([#589](https://github.com/developmentseed/eoapi-k8s/issues/589)) ([02293cf](https://github.com/developmentseed/eoapi-k8s/commit/02293cfc340e61ffced7ca1598a197cbdcc4c2bf))
+* **deps:** updated docker/login-action digest to 06fb636 ([#583](https://github.com/developmentseed/eoapi-k8s/issues/583)) ([4026bd9](https://github.com/developmentseed/eoapi-k8s/commit/4026bd9298d1b4c25c879ba3d3096d093fbc4efe))
+* **deps:** updated docker/login-action digest to dbcb813 ([#588](https://github.com/developmentseed/eoapi-k8s/issues/588)) ([10e3add](https://github.com/developmentseed/eoapi-k8s/commit/10e3add108490bef7e53a1ee2e72df04f01e5131))
+* **deps:** updated docker/setup-buildx-action digest to 37fe631 ([#595](https://github.com/developmentseed/eoapi-k8s/issues/595)) ([9996b56](https://github.com/developmentseed/eoapi-k8s/commit/9996b562020e393662c0f9457bc2b8ab55cb85a1))
+* **deps:** updated ghcr.io/developmentseed/tipg docker tag to v1.5.0 ([#584](https://github.com/developmentseed/eoapi-k8s/issues/584)) ([f052a2b](https://github.com/developmentseed/eoapi-k8s/commit/f052a2b035390a9e9fd5fde8890849a0cd2b06f1))
+* **deps:** updated ghcr.io/stac-utils/titiler-pgstac docker tag to v3.0.2 ([#591](https://github.com/developmentseed/eoapi-k8s/issues/591)) ([0508233](https://github.com/developmentseed/eoapi-k8s/commit/0508233786ccc52fb1707b9c6c5fffaf1d5f4bc4))
+* **deps:** updated ghcr.io/stac-utils/titiler-pgstac docker tag to v3.1.0 ([#592](https://github.com/developmentseed/eoapi-k8s/issues/592)) ([101a55f](https://github.com/developmentseed/eoapi-k8s/commit/101a55f4d46cc00706849f75915ccbd10ae65f22))
+* **deps:** updated helm release knative-operator to v1.23.0. ([#594](https://github.com/developmentseed/eoapi-k8s/issues/594)) ([eea941c](https://github.com/developmentseed/eoapi-k8s/commit/eea941c41df42a11aa2c5e22874ed5fc86685315))
+* **deps:** updated helm release metrics-server to 3.14.0. ([#596](https://github.com/developmentseed/eoapi-k8s/issues/596)) ([9092ec0](https://github.com/developmentseed/eoapi-k8s/commit/9092ec0b274c0c12ee9e49564ecb4d171084447d))
+* **deps:** updated helm release prometheus to 29.27.0. ([#590](https://github.com/developmentseed/eoapi-k8s/issues/590)) ([8fbbd42](https://github.com/developmentseed/eoapi-k8s/commit/8fbbd42ea7b286e1d7a7b818f8cb5d4e8a443039))
+* **deps:** updated stac-auth-proxy docker tag to v1.2.0 ([#585](https://github.com/developmentseed/eoapi-k8s/issues/585)) ([48834da](https://github.com/developmentseed/eoapi-k8s/commit/48834da259273a3260e6ea78cd196453eb8cde56))
+* **docs:** introduce stac-auth-proxy ROOT_PATH_SKIP_PREFIXES. ([#587](https://github.com/developmentseed/eoapi-k8s/issues/587)) ([fe63966](https://github.com/developmentseed/eoapi-k8s/commit/fe6396615a8d68a6e44e77e6eb4a06bde070e601))
+* drop unused ingress pathType and cert-manager schema ([#578](https://github.com/developmentseed/eoapi-k8s/issues/578)) ([bcb48e7](https://github.com/developmentseed/eoapi-k8s/commit/bcb48e768c1d2b2a46497c1dbeee5f173dc66921))
+
+
+### Other
+
+* cover ingress disable paths and traefik strip-prefix edges ([#579](https://github.com/developmentseed/eoapi-k8s/issues/579)) ([339e41d](https://github.com/developmentseed/eoapi-k8s/commit/339e41d774c1c10646ca4bca97e6d8d640ce9aa6))
+
+## [0.15.0](https://github.com/developmentseed/eoapi-k8s/compare/v0.14.1...v0.15.0) (2026-07-23)
+
+
+### Added
+
+* add rbac.create toggle for optional RBAC resources ([#573](https://github.com/developmentseed/eoapi-k8s/issues/573)). ([dcfc688](https://github.com/developmentseed/eoapi-k8s/commit/dcfc688828058c35ffb7947f2b5b3f66c843cf83))
+
+
+### Fixed
+
+* make chart images configurable and pin floating tags ([#575](https://github.com/developmentseed/eoapi-k8s/issues/575)) ([80b8e77](https://github.com/developmentseed/eoapi-k8s/commit/80b8e770c353466c76d6891d215027af8ff2235e))
+* omit redundant Release.Namespace from resource metadata ([#572](https://github.com/developmentseed/eoapi-k8s/issues/572)). ([d493e68](https://github.com/developmentseed/eoapi-k8s/commit/d493e6864be2aa182949c2895c3515776d18e675))
+
+
+### Maintenance
+
+* commit Chart.lock and build dependencies from it ([#574](https://github.com/developmentseed/eoapi-k8s/issues/574)). ([2586185](https://github.com/developmentseed/eoapi-k8s/commit/25861859bfbca9ff282ff3fecc874e8853c4e8a8))
+
+## [0.14.1](https://github.com/developmentseed/eoapi-k8s/compare/v0.14.0...v0.14.1) (2026-07-23)
+
+
+### Fixed
+
+* **docs:** updated release information. ([#571](https://github.com/developmentseed/eoapi-k8s/issues/571)) ([693cdb6](https://github.com/developmentseed/eoapi-k8s/commit/693cdb67cc7e1625220bd8cd143a256159abaf99))
+
+
+### Maintenance
+
+* bump minimal version of kubernetes to 1.32 ([#567](https://github.com/developmentseed/eoapi-k8s/issues/567)) ([be183e7](https://github.com/developmentseed/eoapi-k8s/commit/be183e78a152f55f1781ee76498bea875ba07a8c))
+* **deps:** updated actions/checkout digest to 3d3c42e ([#564](https://github.com/developmentseed/eoapi-k8s/issues/564)) ([d70a976](https://github.com/developmentseed/eoapi-k8s/commit/d70a97623edc33e0ff68237adae9f5b1892de6e8))
+* **deps:** updated helm release prometheus to 29.18.0. ([#565](https://github.com/developmentseed/eoapi-k8s/issues/565)) ([5d83768](https://github.com/developmentseed/eoapi-k8s/commit/5d83768feef31c479c4fc976f038a7e489427912))
+* **deps:** updated helm release prometheus to 29.19.0. ([#570](https://github.com/developmentseed/eoapi-k8s/issues/570)) ([88d305d](https://github.com/developmentseed/eoapi-k8s/commit/88d305d103a1c0d56fb7c785f14efed8c9cd27ff))
+
+## [0.14.0](https://github.com/developmentseed/eoapi-k8s/compare/v0.13.4...v0.14.0) (2026-07-20)
+
+
+### Added
+
+* inject gitSha instead of setting manually. ([#550](https://github.com/developmentseed/eoapi-k8s/issues/550)) ([0fcdc44](https://github.com/developmentseed/eoapi-k8s/commit/0fcdc442f10f7b330a5cd56331315cc71eec37f4))
+
+
+### Fixed
+
+* align HPA request-rate metrics with prometheus-adapter rules ([#547](https://github.com/developmentseed/eoapi-k8s/issues/547)) ([e4a5c96](https://github.com/developmentseed/eoapi-k8s/commit/e4a5c961bfb7073e4c239e2c8a66e3e07967fac2))
+* continue gitSha injection simplification. ([#554](https://github.com/developmentseed/eoapi-k8s/issues/554)) ([7bbbf03](https://github.com/developmentseed/eoapi-k8s/commit/7bbbf03f36a23cbc62791251dff6ed6f553d5326))
+* patched stac-browser to support dynamic pathPrefix with trailing slash redirect. ([#555](https://github.com/developmentseed/eoapi-k8s/issues/555)) ([fd6a9a3](https://github.com/developmentseed/eoapi-k8s/commit/fd6a9a3dbcc66f2c4ed32be663cb44fa529f4af0))
+* repair legacy helm unittest suites for current template paths ([#548](https://github.com/developmentseed/eoapi-k8s/issues/548)) ([5dfb6f5](https://github.com/developmentseed/eoapi-k8s/commit/5dfb6f594d5a04163cfd07992aa387959c35d0a8))
+* **tests:** add validation suite for PostgreSQL config rules. ([#553](https://github.com/developmentseed/eoapi-k8s/issues/553)) ([6d6cff9](https://github.com/developmentseed/eoapi-k8s/commit/6d6cff9e0fb509a4c06170e802d96181caf8996c))
+
+
+### Maintenance
+
+* **deps:** bump actions/setup-python from 6.3.0 to 7.0.0 ([#560](https://github.com/developmentseed/eoapi-k8s/issues/560)) ([4dadd8f](https://github.com/developmentseed/eoapi-k8s/commit/4dadd8f9360937e2317272b91c2487bece134bfc))
+* **deps:** updated actions/setup-node action to v7.0.0. ([#559](https://github.com/developmentseed/eoapi-k8s/issues/559)) ([837def6](https://github.com/developmentseed/eoapi-k8s/commit/837def6e99a33d5ab06fb2f6698f1627f6c7f5b9))
+* **deps:** updated helm release knative-operator to v1.22.3. ([#556](https://github.com/developmentseed/eoapi-k8s/issues/556)) ([94d64f7](https://github.com/developmentseed/eoapi-k8s/commit/94d64f7b45363af8271223732b5c1a3921369636))
+* **deps:** updated helm release prometheus to 29.17.0. ([#557](https://github.com/developmentseed/eoapi-k8s/issues/557)) ([89bf271](https://github.com/developmentseed/eoapi-k8s/commit/89bf271358eb2901d4db24c51f2b754b5ec356cd))
+
+## [0.13.4](https://github.com/developmentseed/eoapi-k8s/compare/v0.13.3...v0.13.4) (2026-07-20)
+
+
+### Fixed
+
+* bumped Kubernetes version down to 1.30.0 ([#561](https://github.com/developmentseed/eoapi-k8s/issues/561)). ([60e1af9](https://github.com/developmentseed/eoapi-k8s/commit/60e1af9f246d46dec1c8414f65c8e5a56f58eaea))
+
+## [0.13.3](https://github.com/developmentseed/eoapi-k8s/compare/v0.13.2...v0.13.3) (2026-07-11)
+
+
+### Fixed
+
+* disable mock OIDC server in core profile ([#549](https://github.com/developmentseed/eoapi-k8s/issues/549)) ([7468934](https://github.com/developmentseed/eoapi-k8s/commit/7468934a2f22cbcf46bcbe2a2c3f237b704a0386))
+* local run of integration tests. ([913091c](https://github.com/developmentseed/eoapi-k8s/commit/913091ca974e36df79e371e993fed862f3bf2e04))
+* redirect bare /browser to /browser/ on traefik ([#544](https://github.com/developmentseed/eoapi-k8s/issues/544)) ([e6e92fc](https://github.com/developmentseed/eoapi-k8s/commit/e6e92fc2958ef50ad138dfce60e0548876e372fc))
+
+
+### Maintenance
+
+* bumped version of kubernetes to 1.34+ ([0c11b27](https://github.com/developmentseed/eoapi-k8s/commit/0c11b27012d5675da60e8ca29716662721235968))
+* **deps:** updated helm release knative-operator to v1.22.3. ([#542](https://github.com/developmentseed/eoapi-k8s/issues/542)) ([6aa703d](https://github.com/developmentseed/eoapi-k8s/commit/6aa703de48c8be6e5ea2a0a7476a4869fa133817))
+* **docs:** adjusted AI Guidelines. ([120f976](https://github.com/developmentseed/eoapi-k8s/commit/120f9765d8168b0caf07d02e3442170e84d12c42))
+
+## [0.13.2](https://github.com/developmentseed/eoapi-k8s/compare/v0.13.1...v0.13.2) (2026-07-06)
+
+
+### Fixed
+
+* make Traefik router entrypoints configurable (fixes HTTPS-by-default) ([#540](https://github.com/developmentseed/eoapi-k8s/issues/540)) ([87912ca](https://github.com/developmentseed/eoapi-k8s/commit/87912ca03dcdab38b65f6404c0cd0e719fe46871))
+* **stac-fastapi-pgstac:** Added required collections field. ([1c266ca](https://github.com/developmentseed/eoapi-k8s/commit/1c266caf86fbb6c6e0856e13e9d820d93bdea135))
+
+
+### Maintenance
+
+* **deps:** updated actions/setup-python digest to ece7cb0 ([#532](https://github.com/developmentseed/eoapi-k8s/issues/532)) ([7bbb42c](https://github.com/developmentseed/eoapi-k8s/commit/7bbb42c60f41bef7e2af8b3445de11e0415249a2))
+* **deps:** updated azure/setup-helm digest to 9bc31f4 ([#529](https://github.com/developmentseed/eoapi-k8s/issues/529)) ([536cdb0](https://github.com/developmentseed/eoapi-k8s/commit/536cdb0b2a9dbd4b8359f8317bae4a41a7adc9e3))
+* **deps:** updated docker/build-push-action digest to 53b7df9 ([#534](https://github.com/developmentseed/eoapi-k8s/issues/534)) ([b016524](https://github.com/developmentseed/eoapi-k8s/commit/b016524fd251d10871cf9895ef098034bf05b3b2))
+* **deps:** updated docker/login-action digest to af1e73f ([#538](https://github.com/developmentseed/eoapi-k8s/issues/538)) ([52c2ef6](https://github.com/developmentseed/eoapi-k8s/commit/52c2ef6f66fdd5dbb46d567ab04fb6f5124126b3))
+* **deps:** updated docker/login-action digest to c99871d ([#536](https://github.com/developmentseed/eoapi-k8s/issues/536)) ([6f84797](https://github.com/developmentseed/eoapi-k8s/commit/6f847979262116de5bdfdb8ff626ff51df60c383))
+* **deps:** updated docker/setup-buildx-action digest to bb05f3f ([#537](https://github.com/developmentseed/eoapi-k8s/issues/537)) ([244de36](https://github.com/developmentseed/eoapi-k8s/commit/244de36d71eebff8e34f1dc8df5686506b4fc04c))
+* **deps:** updated ghcr.io/stac-utils/stac-fastapi-pgstac docker tag to v6.3.1 ([#530](https://github.com/developmentseed/eoapi-k8s/issues/530)) ([3b84434](https://github.com/developmentseed/eoapi-k8s/commit/3b844346451480abc4c38b7a2aac80f8729b4319))
+* **deps:** updated helm release prometheus to 29.14.0. ([#535](https://github.com/developmentseed/eoapi-k8s/issues/535)) ([8cb36b7](https://github.com/developmentseed/eoapi-k8s/commit/8cb36b7e2a4455b09997c0314f472624d623e480))
+
+## [0.13.1](https://github.com/developmentseed/eoapi-k8s/compare/v0.13.0...v0.13.1) (2026-06-23)
+
+
+### Maintenance
+
+* **deps:** upgrade eoapi-notifier to 0.1.0. ([#527](https://github.com/developmentseed/eoapi-k8s/issues/527)) ([786e6f1](https://github.com/developmentseed/eoapi-k8s/commit/786e6f1e9cd750f5c6ca78fe21b9825c2cae1afe))
+
+## [0.13.0](https://github.com/developmentseed/eoapi-k8s/compare/v0.12.5...v0.13.0) (2026-06-22)
+
+
+### Added
+
+* add browser.extraEnv passthrough for stac-browser SB_* config ([#525](https://github.com/developmentseed/eoapi-k8s/issues/525)) ([6049462](https://github.com/developmentseed/eoapi-k8s/commit/604946217e0bcae98ba1053a823ca36ea8281c88))
+
+
+### Fixed
+
+* completed autoscaling instructions. ([#521](https://github.com/developmentseed/eoapi-k8s/issues/521)) ([a6ed773](https://github.com/developmentseed/eoapi-k8s/commit/a6ed7732a3c33eac2245b74eeb659d24f89cdd8a))
+* rely on pgstac default for context=off. ([#522](https://github.com/developmentseed/eoapi-k8s/issues/522)) ([2248057](https://github.com/developmentseed/eoapi-k8s/commit/224805788abd1bf3a719ba1bcf89fbc6f851d72e))
+
+
+### Maintenance
+
+* **deps:** updated actions/checkout action to v7.0.0. ([#523](https://github.com/developmentseed/eoapi-k8s/issues/523)) ([d46de3f](https://github.com/developmentseed/eoapi-k8s/commit/d46de3f670d7ae40eb5520d19bc987de94cc4917))
+* **deps:** updated helm release prometheus to 29.12.0. ([#519](https://github.com/developmentseed/eoapi-k8s/issues/519)) ([4593584](https://github.com/developmentseed/eoapi-k8s/commit/45935843656fe0b0a0e17fa52528b8b8892a119d))
+* **deps:** updated helm release prometheus to 29.13.0. ([#526](https://github.com/developmentseed/eoapi-k8s/issues/526)) ([c1ce934](https://github.com/developmentseed/eoapi-k8s/commit/c1ce934a7e710fa46964489b90c89a300125b086))
+
 ## [0.12.5](https://github.com/developmentseed/eoapi-k8s/compare/v0.12.4...v0.12.5) (2026-06-12)
 
 

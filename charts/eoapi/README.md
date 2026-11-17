@@ -36,7 +36,7 @@ helm install eoapi eoapi/eoapi -f profiles/experimental.yaml
 
 ## Prerequisites
 
-- Kubernetes 1.23+
+- Kubernetes 1.32+
 - Helm 3.0+
 - PV provisioner support
 - PostgreSQL operator
@@ -68,6 +68,9 @@ Use pre-configured profiles for common deployment scenarios:
 ```bash
 # Production deployment with stable services only
 helm install eoapi eoapi/eoapi -f profiles/core.yaml
+
+# Full production with autoscaling and observability
+helm install eoapi eoapi/eoapi -f profiles/production.yaml
 
 # Development with all features enabled
 helm install eoapi eoapi/eoapi -f profiles/experimental.yaml
@@ -122,6 +125,7 @@ pgstacBootstrap:
 | Profile | Use Case | Services | Features |
 |---------|----------|----------|----------|
 | `profiles/core.yaml` | Production | STAC, Raster, Vector | Stable, optimized resources |
+| `profiles/production.yaml` | Production | STAC, Raster, Vector, Browser | HA, autoscaling, observability |
 | `profiles/experimental.yaml` | Development/Testing | All services | Includes experimental features, monitoring |
 | `profiles/local/k3s.yaml` | Local k3s | Inherits from experimental | k3s-specific settings |
 | `profiles/local/minikube.yaml` | Local minikube | Inherits from experimental | Minikube-specific settings |
@@ -136,6 +140,8 @@ pgstacBootstrap:
 | `ingress.className` | Ingress controller class | `nginx` |
 | `browser.enabled` | Enable STAC Browser interface | `true` |
 | `pgstacBootstrap.enabled` | Enable database initialization | `true` |
+| `pgstacBootstrap.settings.analyze` | When to run `ANALYZE`: `off`, `afterBootstrap`, `scheduled` or `both` | `afterBootstrap` |
+| `pgstacBootstrap.settings.extraEnv` | Extra env vars for pgstac Jobs/CronJobs, e.g. `PGOPTIONS` | `[]` |
 | `notifications.sources.pgstac` | Enable PostgreSQL notification triggers for STAC item changes | `false` |
 
 ### Resource Configuration
@@ -165,6 +171,49 @@ raster:
         memory: "8Gi"
 ```
 
+### Security Context
+
+This chart defaults to `{}` for `securityContext` (container-level) and
+`podSecurityContext` (pod-level) everywhere, so upgrading doesn't change
+existing deployments. Set them per workload to run on CIS/PSA-hardened
+clusters (non-root execution, `RuntimeDefault` seccomp, no privilege
+escalation, dropped capabilities):
+
+```yaml
+# Example hardened configuration in your values override
+stac:
+  settings:
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      runAsGroup: 65534
+      fsGroup: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      # verify per image: some images need a writable path (e.g. via
+      # extraVolumes/extraVolumeMounts) before enabling this
+      readOnlyRootFilesystem: true
+      capabilities:
+        drop:
+          - ALL
+```
+
+The same `securityContext`/`podSecurityContext` keys are available under
+`raster.settings`, `vector.settings`, `multidim.settings`, `browser.settings`,
+`docServer.settings`, `pgstacBootstrap.settings` (shared by all pgstac Jobs
+and CronJobs: migrate, load-samples, load-queryables, analyze, superuser-init-db,
+maintenance, queue-processor), `pgstacBootstrap.settings.initContainerSecurityContext`
+(container-level only, for the `wait-for-pgstac-jobs` init container),
+`knative.jobs.init`, `knative.cloudEventsSink`, and `testing.mockOidcServer`
+(test infrastructure only).
+
+Two container-level defaults are pre-populated (not empty) to preserve this
+chart's historical behavior: `pgstacBootstrap.settings.initContainerSecurityContext`
+and `knative.jobs.init.securityContext` both default to
+`{runAsNonRoot: true, runAsUser: 65534, runAsGroup: 65534}`.
+
 ### Database Options
 
 1. Integrated PostgreSQL Operator:
@@ -175,6 +224,8 @@ postgresql:
 
 2. External Database:
 ```yaml
+postgrescluster:
+  enabled: false
 postgresql:
   type: "external-plaintext"
   external:
@@ -188,6 +239,8 @@ postgresql:
 
 3. External Database with Secrets:
 ```yaml
+postgrescluster:
+  enabled: false
 postgresql:
   type: "external-secret"
   external:

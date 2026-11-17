@@ -7,13 +7,16 @@ This directory contains the implementation scripts for the eoAPI CLI.
 ```
 scripts/
 ├── lib/
-│   ├── common.sh    # Shared utilities (logging, validation)
-│   └── k8s.sh       # Kubernetes helper functions
-├── cluster.sh       # Cluster management (start, stop, clean, status, inspect)
-├── deployment.sh    # Deployment operations (run, debug)
-├── test.sh          # Test suites (schema, lint, unit, integration)
-├── ingest.sh        # Data ingestion
-└── docs.sh          # Documentation (generate, serve)
+│   ├── common.sh          # Shared utilities (logging, validation)
+│   └── k8s.sh             # Kubernetes helper functions
+├── raw/
+│   ├── ingest.sh          # Data ingestion (pure: psql/jq + a DSN, no kubectl)
+│   └── export.sh          # Data export to NDJSON (pure: psql + a DSN, no kubectl)
+├── cluster.sh             # Cluster management (start, stop, clean, status, inspect)
+├── deployment.sh          # Deployment operations (run, debug)
+├── test.sh                # Test suites (schema, lint, unit, integration)
+├── data-management.sh     # Kubernetes wrapper for raw/ingest.sh and raw/export.sh
+└── docs.sh                # Documentation (generate, serve)
 ```
 
 ## Usage
@@ -28,6 +31,7 @@ All scripts are accessed through the main CLI:
 ./eoapi-cli deployment run
 ./eoapi-cli test all
 ./eoapi-cli ingest collections.json items.json
+./eoapi-cli export ./stac-export
 ./eoapi-cli docs serve
 ```
 
@@ -55,8 +59,14 @@ The eoAPI CLI provides a unified interface for all operations:
 
 ### Deployment Operations
 ```bash
-# Deploy eoAPI
-./eoapi-cli deployment run
+# Deploy eoAPI on k3d (Traefik ingress)
+./eoapi-cli deployment run --profile k3d
+
+# Deploy eoAPI on minikube (NGINX ingress)
+./eoapi-cli deployment run --profile minikube
+
+# Deploy with custom values (alternative to --profile)
+./eoapi-cli deployment run -f charts/eoapi/profiles/local/minikube.yaml
 
 # Debug deployment
 ./eoapi-cli deployment debug
@@ -71,13 +81,22 @@ The eoAPI CLI provides a unified interface for all operations:
 ./eoapi-cli test schema      # Validate Helm chart schema
 ./eoapi-cli test lint        # Run Helm lint
 ./eoapi-cli test unit        # Run Helm unit tests
+./eoapi-cli test queryables  # Run rendered load-queryables script with a stub pypgstac
 ./eoapi-cli test integration # Run integration tests
 ```
 
-### Data Ingestion
+### Data Ingestion and Export
 ```bash
 # Ingest sample data
 ./eoapi-cli ingest <collections-file> <items-file>
+
+# Export STAC data to NDJSON (e.g. before migrating to a new PgSTAC)
+./eoapi-cli export ./stac-export
+
+# Both auto-discover/port-forward the current cluster's own database by
+# default; pass --target-dsn / --source-dsn to talk to any other PgSTAC
+# database instead (see docs/manage-data.md, or scripts/raw/*.sh directly
+# for a Kubernetes-free standalone tool).
 ```
 
 ### Documentation
@@ -108,10 +127,17 @@ The eoAPI CLI provides a unified interface for all operations:
 ### With k3d (recommended)
 ```bash
 # Complete workflow with k3d-managed cluster
-./eoapi-cli cluster start           # Creates k3d cluster
-./eoapi-cli deployment run          # Deploy eoAPI
-./eoapi-cli test integration        # Run integration tests
-./eoapi-cli cluster clean           # Cleanup
+./eoapi-cli cluster start
+./eoapi-cli deployment run --profile k3d
+./eoapi-cli test integration
+./eoapi-cli cluster clean
+```
+
+### With minikube
+```bash
+kubectl config use-context minikube
+./eoapi-cli deployment run --profile minikube
+./eoapi-cli test integration
 ```
 
 ### With existing k3s/k8s cluster
@@ -123,12 +149,14 @@ The eoAPI CLI provides a unified interface for all operations:
 
 Test options:
 - `test all` - Run all test suites
-- `test integration --pytest-args="-v"` - Pass pytest arguments
+- `test integration --pytest-args="-v"` - Pass pytest arguments (flags may appear before or after the subcommand)
+- `test integration --pytest-args "-v -k test_browser"` - Run a filtered subset of integration tests
 
 ## Environment variables
 
 - `NAMESPACE` - Kubernetes namespace (default: eoapi)
 - `RELEASE_NAME` - Helm release name (default: eoapi)
+- `LOCAL_PROFILE` - Local cluster profile for deployment (`k3d` or `minikube`; same as `--profile`)
 - `DEBUG_MODE` - Enable debug output (set to true)
 - `CLUSTER_NAME` - K3s cluster name (default: eoapi-local)
 

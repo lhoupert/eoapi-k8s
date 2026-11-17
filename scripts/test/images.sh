@@ -30,19 +30,15 @@ if [[ ! -f "$PROFILE_PATH" ]]; then
   exit 1
 fi
 
-# Update Helm dependencies if needed
-log_debug "Updating Helm chart dependencies..."
-if ! helm dependency update "$CHART_PATH" &>/dev/null; then
-  log_warn "Helm dependency update failed, continuing anyway..."
-fi
+# Build Helm dependencies from Chart.lock when present
+log_debug "Building Helm chart dependencies..."
+ensure_chart_dependencies "$CHART_PATH" || true
 
 rendered_yaml=$(helm template test-release "$CHART_PATH" \
-  --set gitSha=test \
   -f "$PROFILE_PATH" \
   --set stac-auth-proxy.enabled=false \
   2>&1 || \
 helm template test-release "$CHART_PATH" \
-  --set gitSha=test \
   -f "$PROFILE_PATH" \
   --set stac-auth-proxy.env.OIDC_DISCOVERY_URL=https://dummy.example.com/.well-known/openid-configuration \
   --set stac-auth-proxy.env.OIDC_DISCOVERY_INTERNAL_URL=https://dummy.example.com/.well-known/openid-configuration \

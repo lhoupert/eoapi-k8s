@@ -5,6 +5,7 @@
 # Usage:
 #   helm install eoapi ./charts/eoapi -f profiles/experimental.yaml -f profiles/local/minikube.yaml
 #   helm upgrade eoapi ./charts/eoapi -f profiles/experimental.yaml -f profiles/local/minikube.yaml
+#   eoapi-cli deployment run --profile minikube
 #
 # Note: This profile inherits all settings from experimental.yaml and only overrides minikube-specific values
 
@@ -14,9 +15,6 @@
 # Minikube uses nginx as the default ingress controller
 ingress:
   className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
-    nginx.ingress.kubernetes.io/use-regex: "true"
 
 ######################
 # POSTGRESQL RESOURCES
@@ -47,3 +45,8 @@ postgrescluster:
 monitoring:
   metricsServer:
     enabled: true
+
+# Minikube kubelet certs use the node IP without matching SANs; skip TLS verify.
+metrics-server:
+  args:
+    - --kubelet-insecure-tls

@@ -82,6 +82,50 @@ check_requirements() {
     validate_tools "$@"
 }
 
+# Register HTTPS chart repos referenced by charts/eoapi/Chart.yaml.
+# helm dependency build requires these; OCI repos do not.
+# URLs must match Chart.lock repository fields exactly (including trailing slash).
+ensure_helm_chart_repos() {
+    helm repo add eoapi-k8s https://devseed.com/eoapi-k8s/ --force-update >/dev/null
+    helm repo add knative https://knative.github.io/operator --force-update >/dev/null
+    helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/ --force-update >/dev/null
+    helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update >/dev/null
+    helm repo add grafana https://grafana.github.io/helm-charts --force-update >/dev/null
+    helm repo update eoapi-k8s knative metrics-server prometheus-community grafana >/dev/null
+}
+
+# Prefer helm dependency build when Chart.lock is present so CI/local
+# installs resolve the same locked subchart versions. Fall back to update
+# only when no lockfile exists (first-time / incomplete checkout).
+ensure_chart_dependencies() {
+    local chart_path="${1:-}"
+
+    if [[ -z "$chart_path" ]]; then
+        log_error "Chart path required for ensure_chart_dependencies"
+        return 1
+    fi
+
+    log_debug "Ensuring Helm chart repositories are configured..."
+    if ! ensure_helm_chart_repos; then
+        log_warn "Helm repo setup failed, continuing anyway..."
+    fi
+
+    if [[ -f "$chart_path/Chart.lock" ]]; then
+        log_debug "Building Helm chart dependencies from Chart.lock..."
+        if ! helm dependency build "$chart_path" &>/dev/null; then
+            log_warn "Helm dependency build failed, continuing anyway..."
+            return 1
+        fi
+    else
+        log_debug "Updating Helm chart dependencies (no Chart.lock)..."
+        if ! helm dependency update "$chart_path" &>/dev/null; then
+            log_warn "Helm dependency update failed, continuing anyway..."
+            return 1
+        fi
+    fi
+    return 0
+}
+
 validate_cluster() {
     if ! kubectl cluster-info >/dev/null 2>&1; then
         log_error "Cannot connect to Kubernetes cluster"
@@ -203,37 +247,29 @@ preflight_deploy() {
     return 0
 }
 
-preflight_ingest() {
-    local namespace="$1"
-    local collections_file="$2"
-    local items_file="$3"
+# Validates a STAC input file: must exist, be non-empty, and contain either
+# a single JSON document (e.g. a top-level array of collections/items) or
+# NDJSON (one JSON object per line) -- the same two formats pypgstac/pgstac
+# loaders accept.
+validate_stac_file() {
+    local file="$1"
 
-    log_info "Running pre-flight checks for ingestion..."
+    if [ ! -f "$file" ]; then
+        log_error "Input file not found: $file"
+        return 1
+    fi
 
-    validate_tools kubectl || return 1
-    validate_cluster || return 1
-    validate_namespace "$namespace" || return 1
+    if [ ! -s "$file" ]; then
+        log_error "Input file is empty: $file"
+        return 1
+    fi
 
-    # Check input files
-    for file in "$collections_file" "$items_file"; do
-        if [ ! -f "$file" ]; then
-            log_error "Input file not found: $file"
-            return 1
-        fi
+    # jq's stream parsing accepts a single JSON document or NDJSON uniformly.
+    if ! jq empty "$file" >/dev/null 2>&1; then
+        log_error "Invalid JSON/NDJSON in file: $file"
+        return 1
+    fi
 
-        if [ ! -s "$file" ]; then
-            log_error "Input file is empty: $file"
-            return 1
-        fi
-
-        # Basic JSON validation
-        if ! python3 -m json.tool "$file" >/dev/null 2>&1; then
-            log_error "Invalid JSON in file: $file"
-            return 1
-        fi
-    done
-
-    log_info "✅ Pre-flight checks passed"
     return 0
 }
 
@@ -331,10 +367,27 @@ install_python_requirements() {
 
     [[ ! -f "$full_path" ]] && { log_error "Requirements file not found: $full_path"; return 1; }
 
+    ensure_venv_pip() {
+        if python3 -m pip --version &>/dev/null; then
+            return 0
+        fi
+        log_debug "Bootstrapping pip in virtual environment..."
+        python3 -m ensurepip --upgrade &>/dev/null || return 1
+    }
+
+    install_with_pip() {
+        if command_exists uv && [[ -n "${VIRTUAL_ENV:-}" ]]; then
+            uv pip install -q -r "$full_path"
+        else
+            python3 -m pip install -q -r "$full_path"
+        fi
+    }
+
     # Already in a venv? Just install
     if [[ -n "${VIRTUAL_ENV:-}" ]]; then
         log_debug "Using existing virtual environment: $VIRTUAL_ENV"
-        if python3 -m pip install -q -r "$full_path"; then
+        ensure_venv_pip || { log_error "Failed to bootstrap pip in existing venv"; return 1; }
+        if install_with_pip; then
             return 0
         else
             log_error "Failed to install requirements in existing venv"
@@ -348,7 +401,7 @@ install_python_requirements() {
         log_debug "Activating existing venv: $venv_dir"
         # shellcheck source=/dev/null
         if source "$venv_dir/bin/activate"; then
-            if python3 -m pip install -q -r "$full_path"; then
+            if ensure_venv_pip && install_with_pip; then
                 return 0
             else
                 log_warn "Failed to install in existing venv, will recreate"
@@ -377,10 +430,11 @@ install_python_requirements() {
         log_warn "uv venv creation failed, falling back to python3 -m venv"
     fi
 
-    if python3 -m venv "$venv_dir" 2>&1; then
+    if python3 -m venv --upgrade-deps "$venv_dir" 2>/dev/null || python3 -m venv "$venv_dir" 2>&1; then
         # shellcheck source=/dev/null
         source "$venv_dir/bin/activate" || { log_error "Failed to activate venv"; return 1; }
-        if python3 -m pip install -q -r "$full_path"; then
+        ensure_venv_pip || { log_error "Failed to bootstrap pip in new venv"; return 1; }
+        if install_with_pip; then
             return 0
         else
             log_error "pip install failed"
@@ -415,6 +469,6 @@ export -f command_exists validate_tools check_requirements validate_cluster
 export -f is_ci validate_namespace get_base_url
 export -f detect_release_name detect_namespace
 export -f wait_for_pods validate_eoapi_deployment validate_autoscaling_environment
-export -f preflight_deploy preflight_ingest preflight_test
+export -f preflight_deploy validate_stac_file preflight_test
 export -f validate_python_environment install_python_requirements validate_python_with_requirements
 export -f show_standard_options
